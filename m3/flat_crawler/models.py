@@ -3,9 +3,6 @@ import uuid
 from django.db import models
 
 
-THUBMNAIL_SIZE = (150, 100)
-
-
 class Source(models.TextChoices):
     OTODOM = 'OTO'
     GUMTREE = 'GT'
@@ -20,7 +17,7 @@ class Source(models.TextChoices):
 
 
 class BaseFlatInfo(models.Model):
-    size_m2 = models.DecimalField(max_digits=7, decimal_places=2)
+    size_m2 = models.DecimalField(max_digits=7, decimal_places=2, null=True)
     city = models.CharField(max_length=50, null=True)
     district = models.CharField(max_length=50, null=True)
     sub_district = models.CharField(max_length=50, null=True)
@@ -43,6 +40,7 @@ class Flat(BaseFlatInfo):
 
 
 class FlatPost(BaseFlatInfo):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     flat = models.ForeignKey(Flat, on_delete=models.SET_NULL, blank=True, null=True)
     source = models.CharField(max_length=6, choices=Source.choices)
     url = models.URLField(max_length=300)
@@ -67,8 +65,8 @@ class FlatPost(BaseFlatInfo):
     dt_posted = models.DateTimeField('date posted')
     created = models.DateTimeField(auto_now_add=True)
 
-    post_soup = models.TextField(null=True)
+    post_soup = models.BinaryField(null=True)
     post_hash = models.CharField(max_length=64)
 
     def __repr__(self):
-        return f"{self.heading}, url: {self.url}"
+        return f"{self.heading}, url: {self.url}, id: {self.id}"

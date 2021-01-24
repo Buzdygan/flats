@@ -10,7 +10,9 @@ import requests
 from PIL import Image
 from bs4 import BeautifulSoup
 
-from flat_crawler.models import FlatPost, PostHash, THUBMNAIL_SIZE
+from flat_crawler.constants import THUMBNAIL_SIZE, CITY_WARSAW
+from flat_crawler.models import FlatPost, PostHash
+from flat_crawler.crawlers.helpers import get_img_and_bytes_from_url
 
 
 class CrawlingException(Exception):
@@ -49,15 +51,6 @@ class NoopFilter(BasePostFilter):
         return False
 
 
-def get_img_and_bytes_from_url(img_url: str, resize=None):
-    img = Image.open(BytesIO(requests.get(img_url).content))
-    if resize:
-        img.resize(resize)
-    img_bytes = BytesIO
-    img.save(img_bytes, format="PNG")
-    return img, img_bytes
-
-
 class BaseCrawler(ABC):
     SOURCE = None
 
@@ -67,16 +60,21 @@ class BaseCrawler(ABC):
         post_filter=None,
         allow_pages_without_new_posts=False,
         pages_limit=100,
+        city=CITY_WARSAW,
     ):
         self._start_dt = start_dt
         self._post_filter = post_filter if post_filter is not None else NoopFilter()
         self._allow_pages_without_new_posts = allow_pages_without_new_posts
         self._pages_limit = pages_limit
-        # TODO
-        self._post_hashes = set()
+        self._city = city
+        self._post_hashes = set(
+            PostHash.objects.filter(source=self.SOURCE).values_list('post_hash', flat=True) # pylint: disable=no-member
+        )
 
     def fetch_new_posts(self):
-        for post_page_url in self._get_post_pages_to_crawl(max_pages=self._pages_limit):
+        for post_page_url in self._get_post_pages_to_crawl(
+            page_start=1, page_stop=self._pages_limit
+        ):
             had_new_posts, oldest_dt = self._parse_post_page(
                 post_page_url=post_page_url
             )
@@ -101,6 +99,7 @@ class BaseCrawler(ABC):
             new_posts = True
             post_sketch = self._post_from_soup(soup=post_soup)
             post_sketch.post_hash = post_hash
+            post_sketch.post_soup = post_soup.encode()
             if not post_sketch.dt_posted:
                 logging.warning(
                     f"Date added not found for post: {post_sketch}. Setting to {oldest_post}"
@@ -112,21 +111,8 @@ class BaseCrawler(ABC):
             oldest_post = min(oldest_post, post_sketch.dt_posted)
         return new_posts, oldest_post
 
-    def _add_thumbnail(self, post: FlatPost, img_url: str):
-        _, img_bytes = get_img_and_bytes_from_url(
-            img_url=img_url, resize=THUBMNAIL_SIZE
-        )
-        post.thumbnail = img_bytes.getvalue()
-
-    def _get_post_hash(self, post_soup: BeautifulSoup) -> Tuple[str, bool]:
-        post_hash = hashlib.md5(post_soup.encode()).hexdigest()
-        existing = post_hash in self._post_hashes
-        if not existing:
-            PostHash(source=self.SOURCE, post_hash=post_hash).save()
-            self._post_hashes.add(post_hash)
-        return post_hash, existing
-
     def _process_post_sketch(self, post_sketch: FlatPost) -> None:
+        post_sketch.city = self._city
         if self._ignore_post(post=post_sketch):
             return
 
@@ -148,6 +134,20 @@ class BaseCrawler(ABC):
         except Exception as exc:
             logging.error(f"{post} Failed to be saved")
             raise PostFailedToSave(exc)
+
+    def _add_thumbnail(self, post: FlatPost, img_url: str):
+        _, img_bytes = get_img_and_bytes_from_url(
+            img_url=img_url, resize=THUMBNAIL_SIZE
+        )
+        post.thumbnail = img_bytes.getvalue()
+
+    def _get_post_hash(self, post_soup: BeautifulSoup) -> Tuple[str, bool]:
+        post_hash = hashlib.md5(post_soup.encode()).hexdigest()
+        existing = post_hash in self._post_hashes
+        if not existing:
+            PostHash(source=self.SOURCE, post_hash=post_hash).save()
+            self._post_hashes.add(post_hash)
+        return post_hash, existing
 
     def _process_post_before_save(self, post: FlatPost) -> None:
         pass
@@ -173,7 +173,7 @@ class BaseCrawler(ABC):
             logging.error(f"Failed to load url: {url}")
             raise URLFailedToLoadException(exc)
 
-    def _get_post_pages_to_crawl(self, max_pages):
+    def _get_post_pages_to_crawl(self, page_start, page_stop):
         raise NotImplementedError
 
     def _post_from_soup(self, soup: BeautifulSoup) -> FlatPost:

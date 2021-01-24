@@ -1,0 +1,5 @@
+
+THUMBNAIL_SIZE = (150, 100)
+MINATURE_SIZE = (4, 2)
+
+CITY_WARSAW = 'Warsaw'
