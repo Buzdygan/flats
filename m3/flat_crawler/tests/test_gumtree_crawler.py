@@ -43,7 +43,7 @@ class TestGumtreeCrawler(GumtreeCrawler):
 @patch('flat_crawler.crawlers.helpers.get_img_from_url', new=mock_get_img_from_url)
 @pytest.mark.django_db
 def test_gumtree_crawler():
-    crawler = TestGumtreeCrawler(start_dt=datetime(2000, 1, 1))
+    crawler = TestGumtreeCrawler(start_dt=datetime(2000, 1, 1), district='district')
     crawler.fetch_new_posts()
 
     assert FlatPost.objects.count() == 23
@@ -51,3 +51,10 @@ def test_gumtree_crawler():
 
     assert FlatPost.objects.order_by('price').first().price == 453000
     assert FlatPost.objects.order_by('price').last().price == 1000000
+
+    for post in FlatPost.objects.all():
+        assert post.price
+        assert post.heading
+        assert post.dt_posted
+        assert post.size_m2
+        assert post.district

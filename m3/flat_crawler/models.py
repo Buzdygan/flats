@@ -54,7 +54,7 @@ class FlatPost(BaseFlatInfo):
     photos_signature_json = models.TextField(null=True)
 
     has_balcony = models.BooleanField(default=False)
-    other_info = models.TextField(null=True)
+    info_dict_json = models.TextField(null=True)
 
     details_added = models.BooleanField(default=False)
 
@@ -69,4 +69,7 @@ class FlatPost(BaseFlatInfo):
     post_hash = models.CharField(max_length=64)
 
     def __repr__(self):
+        return f"{self.heading}, url: {self.url}, id: {self.id}"
+
+    def __str__(self):
         return f"{self.heading}, url: {self.url}, id: {self.id}"

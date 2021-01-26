@@ -14,6 +14,8 @@ from flat_crawler.constants import THUMBNAIL_SIZE, CITY_WARSAW
 from flat_crawler.models import FlatPost, PostHash
 from flat_crawler.crawlers.helpers import get_img_and_bytes_from_url
 
+logger = logging.getLogger(__name__)
+
 
 class CrawlingException(Exception):
     pass
@@ -50,6 +52,23 @@ class NoopFilter(BasePostFilter):
     def ignore_detailed_post(self, post: FlatPost) -> bool:
         return False
 
+class DistrictFilter(BasePostFilter):
+    def __init__(self, ignored_districts=[], **kwargs):
+        super().__init__(**kwargs)
+        self._ignored_districts = set(ignored_districts)
+
+    def ignore_post(self, post: FlatPost) -> bool:
+        if post.district and post.district in self._ignored_districts:
+            logger.info(f"Ignoring district {post.district}")
+            return True
+        return False
+
+    def ignore_detailed_post(self, post: FlatPost) -> bool:
+        if post.district and post.district in self._ignored_districts:
+            logger.info(f"Ignoring district {post.district}")
+            return True
+        return False
+
 
 class BaseCrawler(ABC):
     SOURCE = None
@@ -59,62 +78,66 @@ class BaseCrawler(ABC):
         start_dt: datetime,
         post_filter=None,
         allow_pages_without_new_posts=False,
-        pages_limit=100,
+        page_start=1,
+        page_stop=10,
         city=CITY_WARSAW,
     ):
         self._start_dt = start_dt
         self._post_filter = post_filter if post_filter is not None else NoopFilter()
         self._allow_pages_without_new_posts = allow_pages_without_new_posts
-        self._pages_limit = pages_limit
+        self._page_start = page_start
+        self._page_stop = page_stop
         self._city = city
         self._post_hashes = set(
             PostHash.objects.filter(source=self.SOURCE).values_list('post_hash', flat=True) # pylint: disable=no-member
         )
 
     def fetch_new_posts(self):
-        for post_page_url in self._get_post_pages_to_crawl(
-            page_start=1, page_stop=self._pages_limit
-        ):
+        for post_page_url in self._get_post_pages_to_crawl():
             had_new_posts, oldest_dt = self._parse_post_page(
                 post_page_url=post_page_url
             )
             if not self._allow_pages_without_new_posts and not had_new_posts:
-                logging.info(f"Stop crawling, {post_page_url} didn't have new posts")
+                logger.info(f"Stop crawling, {post_page_url} didn't have new posts")
                 break
 
             if oldest_dt < self._start_dt:
-                logging.info(f"Stop crawling, fetched all posts since {oldest_dt}")
+                logger.info(f"Stop crawling, fetched all posts since {oldest_dt}")
                 break
 
     def _parse_post_page(self, post_page_url: str):
-        logging.info(f"Parsing posts on page: {post_page_url}")
+        logger.info(f"Parsing posts on page: {post_page_url}")
         soup = self._get_soup_from_url(url=post_page_url)
         new_posts = False
         oldest_post = datetime.now()
         for post_soup in self._extract_posts_from_page_soup(page_soup=soup):
-            post_hash, is_present = self._get_post_hash(post_soup=post_soup)
+            try:
+                post_sketch = self._post_from_soup(soup=post_soup)
+            except Exception as exc:
+                logger.exception(exc)
+                continue
+            if self._ignore_post(post=post_sketch):
+                continue
+            post_hash, is_present = self._get_post_hash(post=post_sketch)
             if is_present:
-                logging.info("Skipping post, already present.")
+                logger.info("Skipping post, already present.")
                 continue
             new_posts = True
-            post_sketch = self._post_from_soup(soup=post_soup)
             post_sketch.post_hash = post_hash
             post_sketch.post_soup = post_soup.encode()
+            self._validate_post(source_url=post_page_url, post=post_sketch)
+            self._process_post_sketch(post_sketch=post_sketch)
             if not post_sketch.dt_posted:
-                logging.warning(
+                logger.warning(
                     f"Date added not found for post: {post_sketch}. Setting to {oldest_post}"
                 )
                 post_sketch.dt_posted = oldest_post
-            self._validate_post(source_url=post_page_url, post=post_sketch)
-            self._process_post_sketch(post_sketch=post_sketch)
             self._save_post(post=post_sketch)
             oldest_post = min(oldest_post, post_sketch.dt_posted)
         return new_posts, oldest_post
 
     def _process_post_sketch(self, post_sketch: FlatPost) -> None:
         post_sketch.city = self._city
-        if self._ignore_post(post=post_sketch):
-            return
 
         details_soup = self._get_soup_from_url(url=post_sketch.url)
         try:
@@ -123,16 +146,16 @@ class BaseCrawler(ABC):
                 return
             post_sketch.details_added = True
         except CrawlingException:
-            logging.exception(f"Exception when adding details to post: {post_sketch}")
+            logger.exception(f"Exception when adding details to post: {post_sketch}")
 
         self._process_post_before_save(post=post_sketch)
 
     def _save_post(self, post: FlatPost) -> None:
-        logging.info(f"Saving FlatPost: {post}")
+        logger.info(f"Saving FlatPost: {post}")
         try:
             post.save()
         except Exception as exc:
-            logging.error(f"{post} Failed to be saved")
+            logger.error(f"{post} Failed to be saved")
             raise PostFailedToSave(exc)
 
     def _add_thumbnail(self, post: FlatPost, img_url: str):
@@ -141,8 +164,11 @@ class BaseCrawler(ABC):
         )
         post.thumbnail = img_bytes.getvalue()
 
-    def _get_post_hash(self, post_soup: BeautifulSoup) -> Tuple[str, bool]:
-        post_hash = hashlib.md5(post_soup.encode()).hexdigest()
+    def _get_post_hash(self, post: FlatPost) -> Tuple[str, bool]:
+        post_bytes = post.heading.encode()
+        post_bytes += str(post.price).encode()
+        post_bytes += post.thumbnail
+        post_hash = hashlib.md5(post_bytes).hexdigest()
         existing = post_hash in self._post_hashes
         if not existing:
             PostHash(source=self.SOURCE, post_hash=post_hash).save()
@@ -170,10 +196,10 @@ class BaseCrawler(ABC):
             page = requests.get(url)
             return BeautifulSoup(page.content, "html.parser")
         except Exception as exc:
-            logging.error(f"Failed to load url: {url}")
+            logger.error(f"Failed to load url: {url}")
             raise URLFailedToLoadException(exc)
 
-    def _get_post_pages_to_crawl(self, page_start, page_stop):
+    def _get_post_pages_to_crawl(self):
         raise NotImplementedError
 
     def _post_from_soup(self, soup: BeautifulSoup) -> FlatPost:

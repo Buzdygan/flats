@@ -129,6 +129,12 @@ LOGGING = {
     },
     'root': {
         'handlers': ['console'],
-        'level': 'DEBUG',
+        'level': 'INFO',
+    },
+    'loggers': {
+        'm3.flat_crawler': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
     },
 }
