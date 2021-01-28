@@ -1,4 +1,5 @@
 import uuid
+import base64
 
 from django.db import models
 
@@ -34,6 +35,7 @@ class PostHash(models.Model):
 
 class Flat(BaseFlatInfo):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    original_post = models.ForeignKey('FlatPost', on_delete=models.PROTECT, related_name='+')
     min_price = models.IntegerField(null=True)
     recent_price = models.IntegerField(null=True)
     created = models.DateTimeField(auto_now_add=True)
@@ -67,6 +69,10 @@ class FlatPost(BaseFlatInfo):
 
     post_soup = models.BinaryField(null=True)
     post_hash = models.CharField(max_length=64)
+
+    @property
+    def thumbnail_image(self):
+        return base64.b64encode(self.thumbnail).decode('utf-8')
 
     def __repr__(self):
         return f"{self.heading}, url: {self.url}, id: {self.id}"

@@ -1,0 +1,64 @@
+/* body {
+    background: white url("images/kotek.jpg") no-repeat;
+} */
+
+.flat-posts {
+    padding: 20 100px;
+}
+
+.flat-post {
+    width: 100%;
+    min-height: 112px;
+    background-color: #fff;
+    border-bottom: 1px solid rgba(51,51,51,.25);
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+}
+
+.flat-post .thumbnail {
+    grid-column: 1;
+    border: 0;
+    background-color: #fff;
+}
+
+.flat-post .text {
+    grid-column: 2 / 6;
+    padding-left: 20px;
+    padding-right: 40px;
+}
+
+.flat-post .text .title {
+    white-space: nowrap;
+}
+
+.flat-post .text .title a {
+    font-size: 140%;
+    font-weight: 700;
+    color: #000;
+}
+
+.flat-post .text .description {
+    line-height: 1.40;
+}
+
+.flat-post .info {
+    grid-column: 6;
+}
+
+.flat-post .info .price-text {
+    font-size: 150%;
+    font-weight: 900;
+    color: #164e00;
+}
+
+.flat-post .info .size {
+    font-size: 120%;
+    font-weight: 600;
+    color: #000000;
+}
+
+.flat-post .info .district {
+    font-weight: 700;
+    width: 100%;
+    color: #000000;
+}

@@ -10,14 +10,18 @@ from flat_crawler.constants import SRODMIESCIE, MOKOTOW, ZOLIBORZ, OCHOTA, BIELA
 
 
 class Command(BaseCommand):
-    def handle(self, *args, **kwargs):
+    def add_arguments(self, parser):
+        parser.add_argument('--page-start', nargs='?', type=int, default=1)
+        parser.add_argument('--page-end', nargs='?', type=int)
+
+    def handle(self, *args, **options):
         # for district in [SRODMIESCIE, MOKOTOW, ZOLIBORZ, OCHOTA, BIELANY]:
         for district in ['warszawa']:
             GumtreeCrawler(
                 district=district,
                 start_dt=datetime(2020, 1, 1),
-                page_start=8,
-                page_stop=18,
+                page_start=options.get('page-start', 1),
+                page_stop=options.get('page-end', 10),
                 allow_pages_without_new_posts=True,
                 min_price=450000,
                 max_price=1000000,

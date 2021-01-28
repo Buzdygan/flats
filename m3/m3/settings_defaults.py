@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'flat_crawler.apps.FlatCrawlerConfig',
     'django_extensions',
+    'mathfilters',
 ]
 
 MIDDLEWARE = [

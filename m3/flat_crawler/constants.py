@@ -25,6 +25,14 @@ SRODMIESCIE = 'srodmiescie'
 ZOLIBORZ = 'zoliborz'
 
 
+SELECTED_DISTRICTS = [
+    MOKOTOW,
+    OCHOTA,
+    SRODMIESCIE,
+    ZOLIBORZ
+]
+
+
 IGNORED_DISTRICTS = [
     BEMOWO,
     BIALOLEKA,
