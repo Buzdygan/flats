@@ -22,7 +22,9 @@ class BaseMatcher(object):
         matches = self._match_candidates(candidates)
         if len(matches) > 0:
             if len(matches) == 1:
-                logger.info(f"{self._post} matched to {matches[0]} by {self.MATCH_TYPE}")
+                logger.info(
+                    f"{self._post} matched to {matches[0]} by {self.MATCH_TYPE}"
+                )
             else:
                 matches_str = elements_to_str(matches)
                 logger.warning(
@@ -52,7 +54,9 @@ def _extract_signature(post: FlatPost):
     else:
         logger.warning(f"Missing photo signature for {post}")
 
+
 DEFAULT_IMG_MATCH_THRESHOLD = 7
+
 
 class ImageMatcher(BaseMatcher):
     MATCH_TYPE = "image"
@@ -65,39 +69,46 @@ class ImageMatcher(BaseMatcher):
     def _match(self, candidate: FlatPost) -> bool:
         cand_img_arr = _extract_signature(candidate)
         if cand_img_arr is not None and self._img_arr is not None:
-            print('aaaa')
-            print('')
-            print('')
-            print('')
+            print("aaaa")
+            print("")
+            print("")
+            print("")
             print(self._img_arr)
-            print('')
-            print('')
-            print('')
-            print('')
+            print("")
+            print("")
+            print("")
+            print("")
             print(cand_img_arr)
-            print('')
-            print('')
-            print('')
-            print('')
-            dists = [np.average(np.abs(a - b)) for a in self._img_arr for b in cand_img_arr]
+            print("")
+            print("")
+            print("")
+            print("")
+            dists = [
+                np.average(np.abs(a - b)) for a in self._img_arr for b in cand_img_arr
+            ]
             return any(x < self._threshold for x in dists)
         return False
 
 
 class BaseInfoMatcher(BaseMatcher):
     MATCH_TYPE = "base_info"
+
     def _match(self, candidate: FlatPost) -> bool:
-        if self._any(candidate=candidate, fields=['url', 'desc']):
+        if self._any(candidate=candidate, fields=["url", "desc"]):
             return True
 
-        if self._all(candidate=candidate, fields=['size_m2', 'heading', 'district']):
+        if self._all(candidate=candidate, fields=["size_m2", "heading", "district"]):
             return True
 
     def _any(self, candidate, fields):
-        return any(getattr(self._post, field) == getattr(candidate, field) for field in fields)
+        return any(
+            getattr(self._post, field) == getattr(candidate, field) for field in fields
+        )
 
     def _all(self, candidate, fields):
-        return all(getattr(self._post, field) == getattr(candidate, field) for field in fields)
+        return all(
+            getattr(self._post, field) == getattr(candidate, field) for field in fields
+        )
 
 
 class MatchingEngine(object):
@@ -127,7 +138,9 @@ class MatchingEngine(object):
                 self._handle_multiple_matches(post=post, matches=matches)
                 failed_matches.append(post)
 
-        logger.warning(f"Following posts failed to match:\n {elements_to_str(failed_matches)}")
+        logger.warning(
+            f"Following posts failed to match:\n {elements_to_str(failed_matches)}"
+        )
         logger.info(
             f"Matching summary:\n"
             f"{num_created} flats created.\n"
@@ -165,14 +178,16 @@ class MatchingEngine(object):
 
     def _create_flat_from_post(self, post: FlatPost):
         logger.info(f"Creating new Flat from post: {post}")
-        new_flat = Flat(min_price=post.price, recent_price=post.price, original_post=post)
+        new_flat = Flat(
+            min_price=post.price, recent_price=post.price, original_post=post
+        )
         new_flat.save()
         post.flat = new_flat
         post.is_original_post = True
         post.save()
 
     def _handle_multiple_matches(self, post: FlatPost, matches: Iterable[FlatPost]):
-        matches_ids = ','.join(map(str, (match.id for match in matches)))
+        matches_ids = ",".join(map(str, (match.id for match in matches)))
         logger.warning(f"Multiple matches found for post: {post}\nIds: {matches_ids}")
 
     def _get_candidates(self, post: FlatPost):
@@ -183,7 +198,9 @@ class MatchingEngine(object):
 
     def _find_matches(self, post: FlatPost) -> Optional[Iterable[FlatPost]]:
         assert post.flat is None, "Don't match posts already matched"
-        assert not post.is_original_post is None, "Unmatched post has is_original_post=True."
+        assert (
+            not post.is_original_post is None
+        ), "Unmatched post has is_original_post=True."
 
         candidates = self._get_candidates(post=post)
         if candidates.count() > 0:
