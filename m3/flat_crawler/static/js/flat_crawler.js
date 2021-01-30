@@ -14,7 +14,7 @@ $(document).ready(function () {
 
     // on filtering the district input
 
-    $('#distrs').on('change', function () {
+    $('#districts').on('change', function () {
         if(this.value == "all")
             send_data['district'] = "";
         else
