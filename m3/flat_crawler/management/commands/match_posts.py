@@ -1,11 +1,25 @@
 from django.core.management.base import BaseCommand, CommandError
 
 from flat_crawler.utils.flat_post_matcher import MatchingEngine
+from flat_crawler.models import Flat, FlatPost
 
 
 class Command(BaseCommand):
     def add_arguments(self, parser):
-        pass
+        parser.add_argument(
+            '--reset-matching', action='store_true', help='Remove all matching data',
+        )
 
     def handle(self, *args, **options):
-        MatchingEngine().match_posts()
+        if options['reset_matching']:
+            self._reset_matching()
+        else:
+            MatchingEngine().match_posts()
+
+    def _reset_matching(self):
+        Flat.objects.all().delete()
+        for post in FlatPost.objects.all():
+            post.is_original_post = False
+            post.matched_by = None
+            post.is_broken = False
+            post.save()

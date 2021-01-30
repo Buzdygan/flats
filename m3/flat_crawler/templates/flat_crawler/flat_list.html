@@ -12,23 +12,23 @@
 
 <h1> Ogłoszenia </h1>
 <div class="flat-posts">
-{% for post in object_list %}
+{% for flat in object_list %}
     <div class="flat-post">
         <div class="thumbnail">
-            <img src="data:image/png;base64,{{ post.thumbnail_image }}">
+            <img src="data:image/png;base64,{{ flat.thumbnail_image }}">
         </div>
         <div class="text">
             <div class="title">
-                <a class="post-link" href="{{ post.url}}">
-                    {{ post.heading }}
+                <a class="post-link" href="{{ flat.url}}">
+                    {{ flat.heading|truncatechars:60 }}
                 </a>
             </div>
-            <div class="description"> {{ post.desc|truncatewords:100 }} </div>
+            <div class="description"> {{ flat.desc|truncatewords:100 }} </div>
         </div>
         <div class="info">
-            <span class="price-text"> {{ post.price|div:1000 }} tys. zł </span>
-            <div class="size"> {{ post.size_m2 }} m2 </div>
-            <div class="district"> {{ post.district }} </div>
+            <span class="price-text"> {{ flat.price|div:1000|floatformat:'0' }} tys. zł </span>
+            <div class="size"> {{ flat.size_m2 }} m2 </div>
+            <div class="district"> {{ flat.district }} </div>
         </div>
     </div>
 {% endfor %}

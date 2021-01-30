@@ -20,8 +20,8 @@ class Command(BaseCommand):
             GumtreeCrawler(
                 district=district,
                 start_dt=datetime(2020, 1, 1),
-                page_start=options.get('page-start', 1),
-                page_stop=options.get('page-end', 10),
+                page_start=options.get('page_start', 1),
+                page_stop=options.get('page_end', 10),
                 allow_pages_without_new_posts=True,
                 min_price=450000,
                 max_price=1000000,

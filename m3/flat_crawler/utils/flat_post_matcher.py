@@ -11,6 +11,7 @@ from flat_crawler.utils.base_utils import elements_to_str
 
 logger = logging.getLogger(__name__)
 
+ORIGINAL_POST = "original_post"
 
 class BaseMatcher(object):
     MATCH_TYPE = None
@@ -55,7 +56,7 @@ def _extract_signature(post: FlatPost):
         logger.warning(f"Missing photo signature for {post}")
 
 
-DEFAULT_IMG_MATCH_THRESHOLD = 7
+DEFAULT_IMG_MATCH_THRESHOLD = 4
 
 
 class ImageMatcher(BaseMatcher):
@@ -68,26 +69,16 @@ class ImageMatcher(BaseMatcher):
 
     def _match(self, candidate: FlatPost) -> bool:
         cand_img_arr = _extract_signature(candidate)
-        if cand_img_arr is not None and self._img_arr is not None:
-            print("aaaa")
-            print("")
-            print("")
-            print("")
-            print(self._img_arr)
-            print("")
-            print("")
-            print("")
-            print("")
-            print(cand_img_arr)
-            print("")
-            print("")
-            print("")
-            print("")
-            dists = [
-                np.average(np.abs(a - b)) for a in self._img_arr for b in cand_img_arr
-            ]
-            return any(x < self._threshold for x in dists)
-        return False
+        if cand_img_arr is None or self._img_arr is None:
+            return False
+
+        min_len = min(len(cand_img_arr), len(self._img_arr))
+        if min_len <= 1:
+            return False
+
+        dists = [np.average(np.abs(a - b)) for a in self._img_arr for b in cand_img_arr]
+        score = np.average(sorted(dists)[:min_len])
+        return score < self._threshold
 
 
 class BaseInfoMatcher(BaseMatcher):
@@ -118,25 +109,42 @@ class MatchingEngine(object):
         (BaseInfoMatcher, {}),
     ]
 
+    def __init__(self, match_broken=False):
+        self._match_broken = match_broken
+
     def match_posts(self):
-        unmatched_posts = list(FlatPost.objects.filter(flat__isnull=True))
+        unmatched_posts = FlatPost.objects.filter(flat__isnull=True)
+        # Filter out broken posts, unless we do want to match them.
+        if not self._match_broken:
+            unmatched_posts = unmatched_posts.filter(is_broken=False)
+        unmatched_posts = list(unmatched_posts)
         num_unmatched = len(unmatched_posts)
         logger.info(f"Matching {num_unmatched} unmatched posts.")
         failed_matches = []
         num_created = 0
         num_matched = 0
+        num_exceptions = 0
         for post in unmatched_posts:
             logger.info(f"Matching post: {post}")
-            matches = self._find_matches(post=post)
-            if matches is None:
-                self._create_flat_from_post(post=post)
-                num_created += 1
-            elif len(matches) == 1:
-                self._match_post_to_existing_flat(post=post, match=matches[0])
-                num_matched += 1
-            else:
-                self._handle_multiple_matches(post=post, matches=matches)
-                failed_matches.append(post)
+            try:
+                matches, match_type = self._find_matches(post=post)
+                if matches is None:
+                    self._create_flat_from_post(post=post)
+                    num_created += 1
+                elif len(matches) == 1:
+                    self._match_post_to_existing_flat(
+                        post=post, match=matches[0], match_type=match_type
+                    )
+                    num_matched += 1
+                else:
+                    self._handle_multiple_matches(post=post, matches=matches)
+                    failed_matches.append(post)
+            except Exception as exc:
+                logger.exception(f"Matching {post} failed with {exc}")
+                post.is_broken = True
+                post.exception_str = str(exc)
+                post.save()
+                num_exceptions += 1
 
         logger.warning(
             f"Following posts failed to match:\n {elements_to_str(failed_matches)}"
@@ -145,7 +153,8 @@ class MatchingEngine(object):
             f"Matching summary:\n"
             f"{num_created} flats created.\n"
             f"{num_matched} posts matched to existing flats.\n"
-            f"{len(failed_matches)} posts failed to match"
+            f"{len(failed_matches)} posts failed to match\n"
+            f"{num_exceptions} posts were broken."
         )
 
     @classmethod
@@ -167,23 +176,23 @@ class MatchingEngine(object):
                     related_post.save()
                 flat.delete()
 
-    def _match_post_to_existing_flat(self, post: FlatPost, match: FlatPost):
+    def _match_post_to_existing_flat(self, post: FlatPost, match: FlatPost, match_type: str):
         flat = match.flat
         logger.info(f"Attaching post: {post} to existing flat: {flat}")
         flat.recent_price = post.price
         flat.min_price = min(flat.min_price, post.price)
         flat.save()
         post.flat = flat
+        post.matched_by = match_type
         post.save()
 
     def _create_flat_from_post(self, post: FlatPost):
         logger.info(f"Creating new Flat from post: {post}")
-        new_flat = Flat(
-            min_price=post.price, recent_price=post.price, original_post=post
-        )
+        new_flat = Flat(min_price=post.price)
         new_flat.save()
         post.flat = new_flat
         post.is_original_post = True
+        post.matched_by = ORIGINAL_POST
         post.save()
 
     def _handle_multiple_matches(self, post: FlatPost, matches: Iterable[FlatPost]):
@@ -210,4 +219,5 @@ class MatchingEngine(object):
                 matcher = MatcherCls(**config)
                 matches = matcher.find_matches(candidates=candidates)
                 if matches:
-                    return matches
+                    return matches, matcher.MATCH_TYPE
+        return None, None

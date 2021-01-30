@@ -1,5 +1,6 @@
 import uuid
 import base64
+import textwrap
 
 from django.db import models
 
@@ -33,12 +34,45 @@ class PostHash(models.Model):
     post_hash = models.CharField(max_length=64, unique=True)
 
 
-class Flat(BaseFlatInfo):
+class Flat(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     original_post = models.ForeignKey('FlatPost', on_delete=models.PROTECT, related_name='+')
     min_price = models.IntegerField(null=True)
-    recent_price = models.IntegerField(null=True)
     created = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def last_post(self):
+        return self.flatpost_set.filter(
+            is_broken=False, expired=False
+        ).order_by('dt_posted').last()
+
+    @property
+    def url(self):
+        return self.last_post.url
+
+    @property
+    def price(self):
+        return self.last_post.price
+
+    @property
+    def thumbnail_image(self):
+        return self.original_post.thumbnail_image
+
+    @property
+    def size_m2(self):
+        return self.original_post.size_m2
+
+    @property
+    def heading(self):
+        return self.original_post.heading
+
+    @property
+    def desc(self):
+        return self.original_post.desc
+
+    @property
+    def district(self):
+        return self.original_post.district
 
 
 class FlatPost(BaseFlatInfo):
@@ -61,7 +95,7 @@ class FlatPost(BaseFlatInfo):
     details_added = models.BooleanField(default=False)
 
     is_original_post = models.BooleanField(default=False)
-    was_matched = models.BooleanField(default=False)
+    matched_by = models.CharField(max_length=100, null=True)
 
     expired = models.BooleanField(default=False)
     dt_posted = models.DateTimeField('date posted')
@@ -69,13 +103,17 @@ class FlatPost(BaseFlatInfo):
 
     post_soup = models.BinaryField(null=True)
     post_hash = models.CharField(max_length=64)
+    is_broken = models.BooleanField(default=False)
+    exception_str = models.TextField(null=True)
 
     @property
     def thumbnail_image(self):
         return base64.b64encode(self.thumbnail).decode('utf-8')
 
-    def __repr__(self):
-        return f"{self.heading}, url: {self.url}, id: {self.id}"
-
     def __str__(self):
-        return f"{self.heading}, url: {self.url}, id: {self.id}"
+        url = textwrap.TextWrapper(
+            width=100,
+            initial_indent='\t',
+            subsequent_indent='\t'
+        ).fill(text=self.url)
+        return f"\n\t{self.heading[:100]}\n{url}\n\t id: {self.id}"
