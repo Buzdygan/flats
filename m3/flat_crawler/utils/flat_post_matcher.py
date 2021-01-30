@@ -179,7 +179,6 @@ class MatchingEngine(object):
     def _match_post_to_existing_flat(self, post: FlatPost, match: FlatPost, match_type: str):
         flat = match.flat
         logger.info(f"Attaching post: {post} to existing flat: {flat}")
-        flat.recent_price = post.price
         flat.min_price = min(flat.min_price, post.price)
         flat.save()
         post.flat = flat
@@ -188,7 +187,7 @@ class MatchingEngine(object):
 
     def _create_flat_from_post(self, post: FlatPost):
         logger.info(f"Creating new Flat from post: {post}")
-        new_flat = Flat(min_price=post.price)
+        new_flat = Flat(min_price=post.price, original_post=post)
         new_flat.save()
         post.flat = new_flat
         post.is_original_post = True

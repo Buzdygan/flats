@@ -56,7 +56,7 @@ class Flat(models.Model):
 
     @property
     def thumbnail_image(self):
-        return self.original_post.thumbnail_image
+        return base64.b64encode(self.original_post.thumbnail).decode('utf-8')
 
     @property
     def size_m2(self):
