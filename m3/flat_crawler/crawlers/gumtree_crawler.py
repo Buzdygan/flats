@@ -44,7 +44,7 @@ class GumtreeCrawler(BaseCrawler):
         self._min_price = min_price
         self._max_price = max_price
 
-    def _get_url(self, page_num):
+    def _get_main_url(self, page_num):
         return BASE_URL + OFFERS_TEMPLATE % {
             'page': page_num,
             'min_price': self._min_price,
@@ -54,7 +54,7 @@ class GumtreeCrawler(BaseCrawler):
 
     def _get_post_pages_to_crawl(self):
         return [
-            self._get_url(page_num=page)
+            self._get_main_url(page_num=page)
             for page in range(self._page_start, self._page_stop + 1)
         ]
 
@@ -69,7 +69,7 @@ class GumtreeCrawler(BaseCrawler):
         return soup.base.find('div', class_='title').text
 
     def _get_district(self, soup: SoupInfo) -> Optional[str]:
-        url = self._get_url(soup=soup.base)
+        url = self._get_url(soup=soup)
         match = re.search(DISTRICT_PATTERN, url)
         if match:
             return match.group(1)
