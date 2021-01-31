@@ -2,7 +2,7 @@ import logging
 import re
 import json
 from io import BytesIO
-from typing import Iterable
+from typing import Iterable, Optional, Dict
 from datetime import datetime
 
 import requests
@@ -12,8 +12,8 @@ from PIL import Image
 from dateutil import parser
 
 from flat_crawler.models import FlatPost, Source
-from flat_crawler.crawlers.base_crawler import BaseCrawler, get_img_and_bytes_from_url
-from flat_crawler.crawlers.helpers import deduce_size_from_text, get_photo_signature
+from flat_crawler.crawlers.base_crawler import SoupInfo, BaseCrawler, get_img_and_bytes_from_url
+from flat_crawler.crawlers.helpers import get_photo_signature
 
 logger = logging.getLogger(__name__)
 
@@ -58,79 +58,84 @@ class GumtreeCrawler(BaseCrawler):
             for page in range(self._page_start, self._page_stop + 1)
         ]
 
-    def _post_from_soup(self, soup: BeautifulSoup) -> FlatPost:
-        post = FlatPost()
+    def _extract_posts_from_page_soup(self, page_soup: BeautifulSoup) -> Iterable[BeautifulSoup]:
+        return page_soup.findAll("div", {"class": "tileV1"})
 
-        # title
-        post.heading = soup.find('div', class_='title').text
-
-        # url
-        post.url = BASE_URL + soup.find('div', class_='title').find(
+    def _get_url(self, soup: SoupInfo) -> Optional[str]:
+        return BASE_URL + soup.base.find('div', class_='title').find(
             'a', class_='href-link tile-title-text').attrs.get('href')
 
-        # district
-        match = re.search(DISTRICT_PATTERN, post.url)
+    def _get_heading(self, soup: SoupInfo) -> Optional[str]:
+        return soup.base.find('div', class_='title').text
+
+    def _get_district(self, soup: SoupInfo) -> Optional[str]:
+        url = self._get_url(soup=soup.base)
+        match = re.search(DISTRICT_PATTERN, url)
         if match:
-            post.district = match.group(1)
+            return match.group(1)
         else:
-            logger.warning(f"District not found in url: {post.url}")
+            logger.warning(f"District not found in url: {url}")
 
-        # short description
-        post.desc = soup.find('div', class_='description').text
+    def _get_price(self, soup: SoupInfo) -> Optional[int]:
+        price_text = soup.base.find('span', class_='ad-price').text
+        return int(re.sub(r'\s+', '', price_text.replace('zł', '')))
 
-        # price
-        price_text = soup.find('span', class_='ad-price').text
-        post.price = int(re.sub(r'\s+', '', price_text.replace('zł', '')))
-
-        # thumbnail
-        img_url = soup.find('div', class_='bolt-image').find('picture').find(
+    def _get_thumbnail_url(self, soup: SoupInfo) -> Optional[str]:
+        return soup.base.find('div', class_='bolt-image').find('picture').find(
             'source', {'type': 'image/jpeg'}).attrs.get('data-srcset')
-        self._add_thumbnail(post=post, img_url=img_url)
 
-        return post
+    def _get_desc(self, soup: SoupInfo) -> Optional[str]:
+        if soup.detailed is not None:
+            return soup.detailed.find('div', class_='description').text
 
-    def _add_details(self, post: FlatPost, details_soup: BeautifulSoup) -> None:
-        # description
-        post.desc = details_soup.find('div', class_='description').text
-
-        # getting details dict
-        details_dict = {}
-        for entry in details_soup.find('ul', class_='selMenu').findAll('li'):
-            name = entry.find('span', class_='name')
-            val = entry.find('span', class_='value')
-            if name and val:
-                details_dict[name.text] = val.text
-
-        post.info_dict_json = json.dumps(details_dict)
-
-        # size
-        size = details_dict.get('Wielkość (m2)')
-        if size is not None:
-            post.size_m2 = float(size)
+    def _get_size_m2(self, soup: SoupInfo) -> Optional[int]:
+        SIZE_KEY = 'Wielkość (m2)'
+        details_dict = self._get_details_dict(soup=soup)
+        if details_dict is not None and SIZE_KEY in details_dict:
+            return float(details_dict[SIZE_KEY])
         else:
-            text = post.heading + ' ' + post.desc
-            post.size_m2 = deduce_size_from_text(text=text, price=post.price) #pylint:disable=assignment-from-none
+            return self._deduce_size_m2_from_text(soup=soup)
 
-        if post.size_m2 is None:
-            logger.warning(f"Couldn't get size for {post}")
+    def _get_sub_district(self, soup: SoupInfo) -> Optional[str]:
+        # TODO Implement
+        return None
 
-        # date added
-        date_added = details_dict.get('Data dodania')
-        if date_added:
-            post.dt_posted = parser.parse(date_added)
+    def _get_street(self, soup: SoupInfo) -> Optional[str]:
+        # TODO Implement
+        return None
+
+    def _get_photos_signature_json(self, soup: SoupInfo) -> Optional[str]:
+        if soup.detailed is not None:
+            image_urls = list(filter(lambda x: x is not None, [
+                image.attrs.get('src')
+                for image in soup.detailed.find('div', class_='vip-gallery').findAll('img')
+            ]))
+            return get_photo_signature(image_urls=image_urls)
+
+    def _get_details_dict(self, soup: SoupInfo) -> Optional[Dict]:
+        if soup.detailed is not None:
+            details_dict = {}
+            for entry in soup.detailed.find('ul', class_='selMenu').findAll('li'):
+                name = entry.find('span', class_='name')
+                val = entry.find('span', class_='value')
+                if name and val:
+                    details_dict[name.text] = val.text
+            return details_dict
+
+    def _get_info_dict_json(self, soup: SoupInfo) -> Optional[str]:
+        details_dict = self._get_details_dict(soup=soup)
+        if details_dict is not None:
+            return json.dumps(details_dict)
+
+    def _get_dt_posted(self, soup: SoupInfo) -> Optional[datetime]:
+        DT_KEY = 'Data dodania'
+        details_dict = self._get_details_dict(soup=soup)
+        if details_dict is None:
+            return None
+
+        if DT_KEY in details_dict:
+            return parser.parse(details_dict[DT_KEY])
         else:
             logger.warning(
                 f"GUMTREE: didn't found date added, available fields: {details_dict.keys()}"
-                f" In post: {post}."
             )
-
-        # images
-        image_urls = list(filter(lambda x: x is not None, [
-            image.attrs.get('src')
-            for image in details_soup.find('div', class_='vip-gallery').findAll('img')
-        ]))
-        post.photos_signature_json = get_photo_signature(image_urls=image_urls)
-
-
-    def _extract_posts_from_page_soup(self, page_soup: BeautifulSoup) -> Iterable[BeautifulSoup]:
-        return page_soup.findAll("div", {"class": "tileV1"})

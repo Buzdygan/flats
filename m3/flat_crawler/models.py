@@ -79,17 +79,19 @@ class FlatPost(BaseFlatInfo):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     flat = models.ForeignKey(Flat, on_delete=models.SET_NULL, blank=True, null=True)
     source = models.CharField(max_length=6, choices=Source.choices)
-    url = models.URLField(max_length=300)
+    url = models.URLField(max_length=300, null=True)
 
-    img_url = models.URLField(max_length=300, null=True)
+    thumbnail_url = models.URLField(max_length=300, null=True)
     thumbnail = models.BinaryField(null=True)
 
-    price = models.IntegerField()
+    price = models.IntegerField(null=True)
     heading = models.CharField(max_length=200, null=True)
     desc = models.TextField(null=True)
     photos_signature_json = models.TextField(null=True)
 
-    has_balcony = models.BooleanField(default=False)
+    dt_posted = models.DateTimeField('date posted', null=True)
+
+    has_balcony = models.BooleanField(null=True)
     info_dict_json = models.TextField(null=True)
 
     details_added = models.BooleanField(default=False)
@@ -98,10 +100,10 @@ class FlatPost(BaseFlatInfo):
     matched_by = models.CharField(max_length=100, null=True)
 
     expired = models.BooleanField(default=False)
-    dt_posted = models.DateTimeField('date posted')
     created = models.DateTimeField(auto_now_add=True)
 
     post_soup = models.BinaryField(null=True)
+    post_detailed_soup = models.BinaryField(null=True)
     post_hash = models.CharField(max_length=64)
     is_broken = models.BooleanField(default=False)
     exception_str = models.TextField(null=True)
