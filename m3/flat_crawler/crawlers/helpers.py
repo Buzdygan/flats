@@ -30,13 +30,6 @@ def get_img_from_url(img_url, resize=None):
     return img
 
 
-def get_img_and_bytes_from_url(img_url: str, resize=None):
-    img = get_img_from_url(img_url=img_url)
-    img_bytes = BytesIO()
-    img.save(img_bytes, format="PNG")
-    return img, img_bytes
-
-
 def get_photo_signature(image_urls):
     return json.dumps([list(get_img_from_url(img_url=img_url, resize=MINATURE_SIZE).getdata())
                        for img_url in image_urls])

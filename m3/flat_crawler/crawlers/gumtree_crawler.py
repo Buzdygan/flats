@@ -2,17 +2,16 @@ import logging
 import re
 import json
 from io import BytesIO
-from typing import Iterable, Optional, Dict
+from typing import Iterable, Optional, Dict, List
 from datetime import datetime
 
-import requests
 import fire
 from bs4 import BeautifulSoup
 from PIL import Image
 from dateutil import parser
 
 from flat_crawler.models import FlatPost, Source
-from flat_crawler.crawlers.base_crawler import SoupInfo, BaseCrawler, get_img_and_bytes_from_url
+from flat_crawler.crawlers.base_crawler import SoupInfo, BaseCrawler
 from flat_crawler.crawlers.helpers import get_photo_signature
 
 logger = logging.getLogger(__name__)
@@ -103,6 +102,13 @@ class GumtreeCrawler(BaseCrawler):
     def _get_street(self, soup: SoupInfo) -> Optional[str]:
         # TODO Implement
         return None
+
+    def _get_img_urls(self, soup: SoupInfo) -> Optional[List[str]]:
+        if soup.detailed is not None:
+            return list(filter(lambda x: x is not None, [
+                image.attrs.get('src')
+                for image in soup.detailed.find('div', class_='vip-gallery').findAll('img')
+            ]))
 
     def _get_photos_signature_json(self, soup: SoupInfo) -> Optional[str]:
         if soup.detailed is not None:

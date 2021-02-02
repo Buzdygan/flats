@@ -3,16 +3,16 @@ import hashlib
 
 from abc import ABC
 from io import BytesIO
-from typing import Iterable, Tuple, NamedTuple, Optional
+from typing import Iterable, Tuple, NamedTuple, Optional, List
 from datetime import datetime
 
-import requests
 from PIL import Image
 from bs4 import BeautifulSoup
 
 from flat_crawler.constants import THUMBNAIL_SIZE, CITY_WARSAW
 from flat_crawler.models import FlatPost, PostHash
-from flat_crawler.crawlers.helpers import get_img_and_bytes_from_url, get_soup_from_url, deduce_size_from_text
+from flat_crawler.crawlers.helpers import get_soup_from_url, deduce_size_from_text
+from flat_crawler.utils.img_utils import get_img_bytes_from_url, img_urls_to_bytes
 from flat_crawler import exceptions as exc
 
 logger = logging.getLogger(__name__)
@@ -78,7 +78,7 @@ class BaseCrawler(ABC):
             'price': self._get_price,
             'heading': self._get_heading,
             'desc': self._get_desc,
-            'photos_signature_json': self._get_photos_signature_json,
+            'photos_bytes': self._get_photos_bytes,
             'info_dict_json': self._get_info_dict_json,
             'dt_posted': self._get_dt_posted,
         }
@@ -226,10 +226,9 @@ class BaseCrawler(ABC):
     def _get_thumbnail(self, soup: SoupInfo):
         thumbnail_url = self._get_thumbnail_url(soup=soup)
         if thumbnail_url:
-            _, img_bytes = get_img_and_bytes_from_url(
+            return get_img_bytes_from_url(
                 img_url=thumbnail_url, resize=THUMBNAIL_SIZE
             )
-            return img_bytes.getvalue()
 
     def _get_price(self, soup: SoupInfo) -> Optional[int]:
         return None
@@ -241,6 +240,14 @@ class BaseCrawler(ABC):
         return None
 
     def _get_photos_signature_json(self, soup: SoupInfo) -> Optional[str]:
+        return None
+
+    def _get_photos_bytes(self, soup: SoupInfo) -> Optional[bytes]:
+        img_urls = self._get_img_urls(soup=soup)
+        if img_urls is not None:
+            return img_urls_to_bytes(img_urls=img_urls)
+
+    def _get_img_urls(self, soup: SoupInfo) -> Optional[List[str]]:
         return None
 
     def _get_info_dict_json(self, soup: SoupInfo) -> Optional[str]:

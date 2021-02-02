@@ -200,8 +200,8 @@ class MatchingEngine(object):
 
     def _get_candidates(self, post: FlatPost):
         flat_q = FlatPost.objects.filter(is_original_post=True)
-        flat_q = flat_q.filter(size_m2__gte=float(post.size_m2) - 1)
-        flat_q = flat_q.filter(size_m2__lte=float(post.size_m2) + 1)
+        flat_q = flat_q.filter(size_m2__gte=post.size_m2 - 1)
+        flat_q = flat_q.filter(size_m2__lte=post.size_m2 + 1)
         return flat_q
 
     def _find_matches(self, post: FlatPost) -> Optional[Iterable[FlatPost]]:

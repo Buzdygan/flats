@@ -19,7 +19,7 @@ class Source(models.TextChoices):
 
 
 class BaseFlatInfo(models.Model):
-    size_m2 = models.DecimalField(max_digits=7, decimal_places=2, null=True)
+    size_m2 = models.FloatField(null=True)
     city = models.CharField(max_length=50, null=True)
     district = models.CharField(max_length=50, null=True)
     sub_district = models.CharField(max_length=50, null=True)
@@ -87,6 +87,7 @@ class FlatPost(BaseFlatInfo):
     price = models.IntegerField(null=True)
     heading = models.CharField(max_length=200, null=True)
     desc = models.TextField(null=True)
+    photos_bytes = models.BinaryField(null=True)
     photos_signature_json = models.TextField(null=True)
 
     dt_posted = models.DateTimeField('date posted', null=True)
@@ -119,3 +120,25 @@ class FlatPost(BaseFlatInfo):
             subsequent_indent='\t'
         ).fill(text=self.url)
         return f"\n\t{self.heading[:100]}\n{url}\n\t id: {self.id}"
+
+
+class ImageMatch(models.Model):
+    post_1 = models.ForeignKey(
+        FlatPost, on_delete=models.SET_NULL, blank=True, null=True, related_name='img_match_1'
+    )
+    # Position of image on decompressed post_1.photos_bytes list, None means thumbnail
+    img_pos_1 = models.IntegerField(null=True)
+
+    post_2 = models.ForeignKey(
+        FlatPost, on_delete=models.SET_NULL, blank=True, null=True, related_name='img_match_2'
+    )
+    # Position of image on decompressed post_2.photos_bytes list, None means thumbnail
+    img_pos_2 = models.IntegerField(null=True)
+
+    num_comparers_confirmed = models.IntegerField(null=True)
+    num_comparers_maybe_matched = models.IntegerField(null=True)
+    avg_score = models.FloatField(null=True)
+
+    # Dict: comparer_id: comparer_score
+    details_json = models.TextField(null=True)
+    created = models.DateTimeField(auto_now_add=True)
