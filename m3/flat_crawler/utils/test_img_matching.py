@@ -4,8 +4,9 @@ from itertools import combinations
 
 from PIL import Image
 
-from flat_crawler.utils.img_matching import ImageMatchingEngine
+from flat_crawler.utils.img_matching import ImageMatchingEngine, FlatPostImage
 from flat_crawler.utils.img_utils import bytes_to_images
+from flat_crawler.models import FlatPost, ImageMatch
 
 
 def _load_img(img_id):
@@ -24,8 +25,41 @@ IMAGES = [
     _load_img('img_2_b'),
 ]
 
+@pytest.mark.django_db
+def test_get_image_match():
+    engine = ImageMatchingEngine()
 
-def test_img_matcher():
+    fp_1 = FlatPost(heading='fp_1')
+    fp_1.save()
+
+    fp_2 = FlatPost(heading='fp_2')
+    fp_2.save()
+
+    if fp_1.id > fp_2.id:
+        fp_1, fp_2 = fp_2, fp_1
+
+    fp_img_1 = FlatPostImage(flat_post=fp_1, image=IMAGES[0], img_pos=0)
+    fp_img_2 = FlatPostImage(flat_post=fp_2, image=IMAGES[0], img_pos=1)
+
+    match = engine.get_image_match(fp_img_1, fp_img_2, dry=True)
+    assert match is not None
+    assert ImageMatch.objects.count() == 0
+
+    match = engine.get_image_match(fp_img_1, fp_img_2)
+
+    assert ImageMatch.objects.count() == 1
+    img_match = ImageMatch.objects.get(post_1=fp_1, post_2=fp_2)
+
+    assert match == img_match
+
+    assert img_match.img_pos_1 == 0
+    assert img_match.img_pos_2 == 1
+
+    assert img_match.num_comparers_confirmed == 3
+    assert img_match.num_comparers_maybe_matched == 0
+
+
+def test_compare_images():
     engine = ImageMatchingEngine()
 
     # Image should match with itself

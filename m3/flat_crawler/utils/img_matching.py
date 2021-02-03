@@ -139,10 +139,10 @@ class ImageMatchingEngine(object):
             )
 
         # Keep order to avoid saving the same matching twice
-        if fp_image_1.flat_post.id > fp_image_2.flat_post_id:
+        if fp_image_1.flat_post.id > fp_image_2.flat_post.id:
             fp_image_1, fp_image_2 = fp_image_2, fp_image_1
 
-        image_match_q = ImageMatch.filter(
+        image_match_q = ImageMatch.objects.filter(
             post_1=fp_image_1.flat_post, post_2=fp_image_2.flat_post
         )
         assert len(image_match_q) <= 1, (
@@ -203,7 +203,7 @@ class ImageMatchingEngine(object):
             img_pos_2=fp_image_2.img_pos,
             num_comparers_confirmed=confirmed,
             num_comparers_maybe_matched=maybe_matched,
-            avg_score=np.average(details_dict.values()),
+            avg_score=np.average(list(details_dict.values())),
             details_json=json.dumps(details_dict),
         )
 
