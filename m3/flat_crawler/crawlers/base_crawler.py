@@ -191,9 +191,6 @@ class BaseCrawler(ABC):
             logger.error(f"{post} Failed to be saved")
             raise exceptions.PostFailedToSave(exc)
 
-    def _get_post_pages_to_crawl(self):
-        raise NotImplementedError
-
     def _extract_posts_from_page_soup(
         self, page_soup: BeautifulSoup
     ) -> Iterable[BeautifulSoup]:

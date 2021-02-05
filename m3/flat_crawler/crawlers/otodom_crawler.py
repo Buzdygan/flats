@@ -61,6 +61,7 @@ class OtodomCrawler(BaseCrawler):
     SOURCE = Source.GUMTREE
 
     def __init__(
+        self,
         **kwargs
     ):
         super().__init__(**kwargs)

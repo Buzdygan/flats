@@ -12,7 +12,6 @@ from dateutil import parser
 
 from flat_crawler.models import FlatPost, Source
 from flat_crawler.crawlers.base_crawler import SoupInfo, BaseCrawler
-from flat_crawler.crawlers.helpers import get_photo_signature
 
 logger = logging.getLogger(__name__)
 
