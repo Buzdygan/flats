@@ -134,7 +134,7 @@ LOGGING = {
         'level': 'INFO',
     },
     'loggers': {
-        'm3.flat_crawler': {
+        'm3': {
             'handlers': ['console'],
             'level': 'INFO',
         },

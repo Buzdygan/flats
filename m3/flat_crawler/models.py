@@ -4,6 +4,8 @@ import textwrap
 
 from django.db import models
 
+from flat_crawler.utils.img_utils import bytes_to_images
+
 
 class Source(models.TextChoices):
     OTODOM = 'OTO'
@@ -88,7 +90,6 @@ class FlatPost(BaseFlatInfo):
     heading = models.CharField(max_length=200, null=True)
     desc = models.TextField(null=True)
     photos_bytes = models.BinaryField(null=True)
-    photos_signature_json = models.TextField(null=True)
 
     dt_posted = models.DateTimeField('date posted', null=True)
 
@@ -112,6 +113,10 @@ class FlatPost(BaseFlatInfo):
     @property
     def thumbnail_image(self):
         return base64.b64encode(self.thumbnail).decode('utf-8')
+
+    @property
+    def images(self):
+        return bytes_to_images(self.photos_bytes)
 
     def __str__(self):
         url = textwrap.TextWrapper(

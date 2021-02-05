@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
 
 from flat_crawler.utils.flat_post_matcher import MatchingEngine
-from flat_crawler.models import Flat, FlatPost
+from flat_crawler.models import Flat, FlatPost, ImageMatch
 
 
 class Command(BaseCommand):
@@ -18,6 +18,7 @@ class Command(BaseCommand):
 
     def _reset_matching(self):
         Flat.objects.all().delete()
+        ImageMatch.objects.all().delete()
         for post in FlatPost.objects.all():
             post.is_original_post = False
             post.matched_by = None

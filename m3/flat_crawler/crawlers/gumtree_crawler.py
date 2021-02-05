@@ -51,12 +51,6 @@ class GumtreeCrawler(BaseCrawler):
             'district': self._district
         }
 
-    def _get_post_pages_to_crawl(self):
-        return [
-            self._get_main_url(page_num=page)
-            for page in range(self._page_start, self._page_stop + 1)
-        ]
-
     def _extract_posts_from_page_soup(self, page_soup: BeautifulSoup) -> Iterable[BeautifulSoup]:
         return page_soup.findAll("div", {"class": "tileV1"})
 
@@ -109,14 +103,6 @@ class GumtreeCrawler(BaseCrawler):
                 image.attrs.get('src')
                 for image in soup.detailed.find('div', class_='vip-gallery').findAll('img')
             ]))
-
-    def _get_photos_signature_json(self, soup: SoupInfo) -> Optional[str]:
-        if soup.detailed is not None:
-            image_urls = list(filter(lambda x: x is not None, [
-                image.attrs.get('src')
-                for image in soup.detailed.find('div', class_='vip-gallery').findAll('img')
-            ]))
-            return get_photo_signature(image_urls=image_urls)
 
     def _get_details_dict(self, soup: SoupInfo) -> Optional[Dict]:
         if soup.detailed is not None:

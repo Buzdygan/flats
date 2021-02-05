@@ -8,6 +8,8 @@ from django.db.models.query import QuerySet
 
 from flat_crawler.models import Flat, FlatPost
 from flat_crawler.utils.base_utils import elements_to_str
+from flat_crawler.utils.img_utils import bytes_to_images
+from flat_crawler.utils.img_matching import ImageMatchingEngine, FlatPostImage
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +44,7 @@ class BaseMatcher(object):
         raise NotImplementedError
 
 
+# Currently not used
 class ThumbnailMatcher(BaseMatcher):
     MATCH_TYPE = "thumbnail"
 
@@ -49,36 +52,47 @@ class ThumbnailMatcher(BaseMatcher):
         return list(candidates.filter(thumbnail=self._post.thumbnail))
 
 
-def _extract_signature(post: FlatPost):
-    if post.photos_signature_json:
-        return np.array(json.loads(post.photos_signature_json))
+def _extract_fp_images(post: FlatPost) -> List[FlatPostImage]:
+    images = bytes_to_images(post.photos_bytes)
+    if len(images) > 0:
+        return [FlatPostImage(flat_post=post, image=img, img_pos=pos)
+                for pos, img in enumerate(images)
+        ]
     else:
-        logger.warning(f"Missing photo signature for {post}")
-
-
-DEFAULT_IMG_MATCH_THRESHOLD = 4
+        logger.warning(f"Missing photos for {post}")
+        return []
 
 
 class ImageMatcher(BaseMatcher):
     MATCH_TYPE = "image"
 
-    def __init__(self, post, threshold=DEFAULT_IMG_MATCH_THRESHOLD):
+    EXACT_THRESHOLD = 2
+    CONFIDENT_THRESHOLD = 3
+    MAYBE_THRESHOLD = 5
+
+    def __init__(self, post, matching_engine: ImageMatchingEngine, dry: bool = False):
         super().__init__(post=post)
-        self._img_arr = _extract_signature(post)
-        self._threshold = threshold
+        self._engine = matching_engine
+        self._fp_images = _extract_fp_images(post=post)
+        self._dry = dry
 
     def _match(self, candidate: FlatPost) -> bool:
-        cand_img_arr = _extract_signature(candidate)
-        if cand_img_arr is None or self._img_arr is None:
-            return False
+        cand_images = _extract_fp_images(post=candidate)
+        matches = [self._engine.get_image_match(img1, img2, dry=self._dry)
+                   for img1 in self._fp_images for img2 in cand_images
+        ]
+        exact_matches, confident_matches, maybe_matches = 0, 0, 0
+        for match in filter(lambda x: x is not None, matches):
+            if match.num_comparers_confirmed == self._engine.num_comparers:
+                exact_matches += 1
+            elif match.num_comparers_confirmed > 0:
+                confident_matches += 1
+            elif match.num_comparers_maybe_matched == self._engine.num_comparers:
+                maybe_matches += 1
 
-        min_len = min(len(cand_img_arr), len(self._img_arr))
-        if min_len <= 1:
-            return False
-
-        dists = [np.average(np.abs(a - b)) for a in self._img_arr for b in cand_img_arr]
-        score = np.average(sorted(dists)[:min_len])
-        return score < self._threshold
+        return (exact_matches >= self.EXACT_THRESHOLD or
+                exact_matches + confident_matches >= self.CONFIDENT_THRESHOLD or
+                exact_matches + confident_matches + maybe_matches >= self.MAYBE_THRESHOLD)
 
 
 class BaseInfoMatcher(BaseMatcher):
@@ -101,11 +115,12 @@ class BaseInfoMatcher(BaseMatcher):
             getattr(self._post, field) == getattr(candidate, field) for field in fields
         )
 
+image_matching_engine = ImageMatchingEngine(stop_early=True)
+
 
 class MatchingEngine(object):
     MATCHERS_CONFIG = [
-        (ThumbnailMatcher, {}),
-        (ImageMatcher, {}),
+        (ImageMatcher, {'matching_engine': image_matching_engine}),
         (BaseInfoMatcher, {}),
     ]
 

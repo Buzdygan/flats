@@ -13,7 +13,7 @@ from flat_crawler.constants import THUMBNAIL_SIZE, CITY_WARSAW
 from flat_crawler.models import FlatPost, PostHash
 from flat_crawler.crawlers.helpers import get_soup_from_url, deduce_size_from_text
 from flat_crawler.utils.img_utils import get_img_bytes_from_url, img_urls_to_bytes
-from flat_crawler import exceptions as exc
+from flat_crawler import exceptions
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +95,12 @@ class BaseCrawler(ABC):
             if oldest_dt < self._start_dt:
                 logger.info(f"Stop crawling, fetched all posts since {oldest_dt}")
                 break
+
+    def _get_post_pages_to_crawl(self):
+        return [
+            self._get_main_url(page_num=page)
+            for page in range(self._page_start, self._page_stop + 1)
+        ]
 
     def _parse_post_page(self, post_page_url: str):
         logger.info(f"Parsing posts on page: {post_page_url}")
@@ -237,9 +243,6 @@ class BaseCrawler(ABC):
         return None
 
     def _get_desc(self, soup: SoupInfo) -> Optional[str]:
-        return None
-
-    def _get_photos_signature_json(self, soup: SoupInfo) -> Optional[str]:
         return None
 
     def _get_photos_bytes(self, soup: SoupInfo) -> Optional[bytes]:
