@@ -20,6 +20,27 @@ class Source(models.TextChoices):
     OKOLICA = "OKO"
 
 
+class Location(models.Model):
+    city = models.CharField(max_length=50, null=True)
+    # e.g "ulica Marszałkowska"
+    full_name = models.CharField(max_length=80, null=True)
+    # e.g. "przy ul. Marszałkowskiej"
+    by_name = models.CharField(max_length=80, null=True)
+    # e.g. ul. Marszałkowska
+    short_name = models.CharField(max_length=80, null=True)
+    # list of districts e.g "Śródmieście, Wola" - not "srodmiescie, wola"
+    districts_local_names = models.TextField(null=True)
+    # From google api response, see https://developers.google.com/maps/documentation/geocoding/overview
+    geolocation_json = models.TextField(null=True)
+
+    # ne = north east
+    ne_lat = models.FloatField(null=True)
+    ne_lng = models.FloatField(null=True)
+    # sw = south west
+    sw_lat = models.FloatField(null=True)
+    sw_lng = models.FloatField(null=True)
+
+
 class BaseFlatInfo(models.Model):
     size_m2 = models.FloatField(null=True)
     city = models.CharField(max_length=50, null=True)

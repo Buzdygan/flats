@@ -125,7 +125,7 @@ class GumtreeCrawler(BaseCrawler):
             return None
 
         if DT_KEY in details_dict:
-            return parser.parse(details_dict[DT_KEY])
+            return parser.parse(details_dict[DT_KEY], dayfirst=True)
         else:
             logger.warning(
                 f"GUMTREE: didn't found date added, available fields: {details_dict.keys()}"
