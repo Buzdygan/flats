@@ -74,15 +74,15 @@ def test_compare_images():
 
     # Those two are similar photos, should be catched by hist comparer
     maybe, confirmed, details = engine.compare_images(IMAGES[2], IMAGES[3])
-    assert maybe == 0
-    assert confirmed == 1
-    assert details['HistComparer'] > 0.9
+    assert maybe == 1
+    assert confirmed == 0
+    assert details['SimpleHistComparer'] > 0.9
 
-    # Those two are similar photos
+    # Those two are similar but different photos
     maybe, confirmed, details = engine.compare_images(IMAGES[4], IMAGES[5])
     assert maybe == 0
-    assert confirmed == 1
-    assert details['HistComparer'] > 0.9
+    assert confirmed == 0
+    assert details['SimpleHistComparer'] > 0.7
 
     # Photos of different places should not match
     for img1, img2 in combinations([IMAGES[0], IMAGES[2], IMAGES[4]], 2):

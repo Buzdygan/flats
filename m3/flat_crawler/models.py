@@ -2,6 +2,7 @@ import uuid
 import base64
 import textwrap
 
+import jsonfield
 from django.db import models
 
 from flat_crawler.utils.img_utils import bytes_to_images
@@ -24,14 +25,18 @@ class Location(models.Model):
     city = models.CharField(max_length=50, null=True)
     # e.g "ulica Marszałkowska"
     full_name = models.CharField(max_length=80, null=True)
-    # e.g. "przy ul. Marszałkowskiej"
+    # e.g. przy "ul. Marszałkowskiej"
     by_name = models.CharField(max_length=80, null=True)
     # e.g. ul. Marszałkowska
     short_name = models.CharField(max_length=80, null=True)
     # list of districts e.g "Śródmieście, Wola" - not "srodmiescie, wola"
-    districts_local_names = models.TextField(null=True)
+    districts_local_names = models.CharField(max_length=100, null=True)
     # From google api response, see https://developers.google.com/maps/documentation/geocoding/overview
-    geolocation_json = models.TextField(null=True)
+    geolocation_data = jsonfield.JSONField(null=True)
+
+    lat = models.FloatField(null=True)
+    lng = models.FloatField(null=True)
+    location_type = models.CharField(max_length=100, null=True)
 
     # ne = north east
     ne_lat = models.FloatField(null=True)
@@ -40,13 +45,27 @@ class Location(models.Model):
     sw_lat = models.FloatField(null=True)
     sw_lng = models.FloatField(null=True)
 
+    def get_names_for_matching(self):
+        """ Return versions of location name for purpose of matching. Order is important as first
+            element will be tried first, so it's better to put longer, more defining versions first.
+            Return (name, max levenstein distance allowed)
+        """
+        names_with_dists = []
+        names_with_dists.append((self.full_name, 0))
+        names_with_dists.append((self.by_name, 0))
+        names_with_dists.append((self.short_name, 0))
+
+        # versions easier to match
+        # names_with_dists.append((self.short_name.replace('ul.', '').replace('pl.', '').strip(), 0))
+        # names_with_dists.append((self.by_name.replace('ul.', '').replace('pl.', '').strip(), 0))
+        return names_with_dists
+
 
 class BaseFlatInfo(models.Model):
     size_m2 = models.FloatField(null=True)
     city = models.CharField(max_length=50, null=True)
     district = models.CharField(max_length=50, null=True)
-    sub_district = models.CharField(max_length=50, null=True)
-    street = models.CharField(max_length=50, null=True)
+    locations = models.ManyToManyField(Location, null=True)
 
     class Meta:
         abstract = True

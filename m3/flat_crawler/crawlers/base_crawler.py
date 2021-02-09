@@ -13,7 +13,7 @@ from flat_crawler.constants import THUMBNAIL_SIZE, CITY_WARSAW
 from flat_crawler.models import FlatPost, PostHash
 from flat_crawler.crawlers.helpers import get_soup_from_url
 from flat_crawler.utils.img_utils import get_img_bytes_from_url, img_urls_to_bytes
-from flat_crawler.utils.extract_info import deduce_size_from_text
+from flat_crawler.utils.text_utils import deduce_size_from_text
 from flat_crawler import exceptions
 
 logger = logging.getLogger(__name__)
