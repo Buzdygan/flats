@@ -3,7 +3,8 @@ import pytest
 from django.test import TestCase
 
 
-from flat_crawler.utils.text_utils import deduce_size_from_text
+from flat_crawler.utils.text_utils import deduce_size_from_text, parse_timedelta_str_to_seconds
+from flat_crawler.constants import MINUTE, HOUR, DAY
 
 
 BASE_PRICE = 300000
@@ -26,3 +27,19 @@ BASE_PRICE = 300000
 )
 def test_deduce_size_from_text(text, price, result):
     assert deduce_size_from_text(text=text, price=price) == result
+
+
+@pytest.mark.parametrize(
+    "td_str, exp_seconds", [
+        ("SEKUNDę", 1),
+        ("3 sekundy temu", 3),
+        ("MINutę temu", MINUTE),
+        ("23 minuty temu", 23 * MINUTE),
+        ("Godzinę temu", HOUR),
+        ("2 godziny temu", 2 * HOUR),
+        ("Dzień temu", DAY),
+        ("5 dni temu", 5 * DAY),
+    ]
+)
+def test_parse_timedelta_str(td_str: str, exp_seconds: int):
+    assert parse_timedelta_str_to_seconds(td_str) == exp_seconds

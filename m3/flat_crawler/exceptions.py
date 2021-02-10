@@ -21,3 +21,7 @@ class PostFailedToSave(CrawlingException):
 
 class NotRecognizedDistrict(Exception):
     pass
+
+
+class InvalidTimedeltaStr(CrawlingException):
+    pass

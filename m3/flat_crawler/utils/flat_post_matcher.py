@@ -25,7 +25,7 @@ class BaseMatcher(object):
         matches = self._match_candidates(candidates)
         if len(matches) > 0:
             if len(matches) == 1:
-                logger.info(
+                logger.debug(
                     f"{self._post} matched to {matches[0]} by {self.MATCH_TYPE}"
                 )
             else:

@@ -3,6 +3,7 @@ from typing import List, Optional
 from functools import reduce
 
 import requests
+from django.db.models import Q
 from urllib import parse
 
 import flat_crawler.constants as ct
@@ -36,7 +37,6 @@ DISTRICT_LOCNAME_DICT = {
 }
 
 
-
 def get_district_local_name(district: str) -> str:
     """ Returns real district name, e.g. srodmiescie -> Śródmieście.
         It should match district names in Location.districts_local_names.
@@ -48,6 +48,14 @@ def get_district_local_name(district: str) -> str:
         return district
 
     raise exceptions.NotRecognizedDistrict(f"Don't recognize district: {district}")
+
+
+def get_locations_from_selected_districts():
+    query = Q()
+    for dist in ct.SELECTED_DISTRICTS:
+        dist_loc = get_district_local_name(district=dist)
+        query = query | Q(districts_local_names__contains=dist_loc)
+    return Location.objects.filter(query)
 
 
 LOCATION_PREFIXES = ['przy', 'ulic']
@@ -98,7 +106,7 @@ def _filter_locations_by_text(text: str, locations):
 
 def extract_locations_from_text(text: str, district=None):
     text = text
-    locations = Location.objects.all()
+    locations = get_locations_from_selected_districts()
     # if district give, try searching in it first
     if district:
         district_lname = get_district_local_name(district)

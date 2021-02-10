@@ -1,6 +1,9 @@
 // variable that keeps all the filter information
 
 var send_data = {}
+const star = "&#9733;";
+const empty_star = "&#9734;";
+
 
 $(document).ready(function () {
     // reset all parameters on page load
@@ -47,10 +50,80 @@ function resetFilters() {
 
     get_districts("all");
 
+    send_data['exclude_rejected'] = 'true';
     send_data['district'] = '';
     send_data["sort_by"] = '',
     send_data['format'] = 'json';
 }
+
+
+const rtype_to_color = {
+    'heart': 'red',
+    'star': 'gold',
+    'reject': 'black'
+}
+
+function updateFlat(flat_id, rtype, is_ticked) {
+    let url = $('#flatlist').attr("url");
+    $.ajax({
+        method: 'GET',
+        url: url,
+        data: {
+            'flat_id': flat_id,
+            'rating_type': rtype,
+            'is_ticked': is_ticked,
+        },
+    });
+}
+
+function tickRate(flat_id, rtype, update) {
+    var rate_el = document.getElementById(rtype + ':' + flat_id);
+    rate_el.setAttribute('data-ticked', 'true');
+    rate_el.style.color = rtype_to_color[rtype];
+    if (update) {
+        updateFlat(flat_id, rtype, "true");
+    }
+}
+
+function untickRate(flat_id, rtype, update) {
+    var rate_el = document.getElementById(rtype + ':' + flat_id);
+    rate_el.setAttribute('data-ticked', 'false')
+    rate_el.style.color = "grey"
+    if (update) {
+        updateFlat(flat_id, rtype, "false");
+    }
+}
+
+function clickRate(flat_id, rtype) {
+    console.log(flat_id + ':' + rtype);
+    var rate_el = document.getElementById(rtype + ':' + flat_id);
+
+    var ticked = rate_el.getAttribute('data-ticked')
+    if(ticked != 'true') {
+        tickRate(flat_id, rtype, true);
+        ['heart', 'star', 'reject'].forEach(item => {
+            if(item != rtype) {
+                untickRate(flat_id, item, false);
+            }
+        })
+    } else {
+        untickRate(flat_id, rtype, true)
+    } 
+    getAPIData();
+}
+
+function heartFlat(flat_id) {
+    clickRate(flat_id, 'heart');
+}
+
+function starFlat(flat_id) {
+    clickRate(flat_id, 'star');
+}
+
+function rejectFlat(flat_id) {
+    clickRate(flat_id, 'reject');
+}
+
 
 /**.
     Utility function to showcase the api data 
@@ -67,6 +140,9 @@ function putTableData(result) {
         $("#list_data").show();
         $("#flatlist").html("");  
         $.each(result["results"], function (a, b) {
+            if (b.rejected) {
+                return;
+            }
             row = "<div class='flat-post'> " +
                 "<div class='thumbnail'><img src='data:image/png;base64," + b.thumbnail_image + "'></div>" +
                 "<div class='text'>" +
@@ -79,10 +155,40 @@ function putTableData(result) {
                     "<span class='price-text'>" + Math.ceil(b.min_price / 1000) + " tys. zł </span>" +
                     "<div class='size'>" + b.size_m2 + " m2</div>" +
                     "<div class='district'>" + b.district + "</div>" + 
+                    "<span class='rating'>" +
+                        "<span class='heart'>" +
+                            "<button class='heart-button' id='heart:" + b.id + "' onclick=heartFlat('" + b.id + "') > &#9829; </button>" + 
+                        "</span>" + 
+                        "<span class='star'>" +
+                            "<button class='star-button' id='star:" + b.id + "' onclick= starFlat('" + b.id + "'); >" + star + "</button>" + 
+                        "</span>" + 
+                        "<span class='reject'>" +
+                            "<button class='reject-button' id='reject:" + b.id + "' onclick=rejectFlat('" + b.id + "') > &#215; </button>" + 
+                        "</span>" +
+                    "</span>" +
                 "</div>"
             "</div>"
             $("#flatlist").append(row);   
+            if (b.hearted) {
+                tickRate(b.id, 'heart', false);
+            } else {
+                untickRate(b.id, 'heart', false);
+            }
+
+            if (b.starred) {
+                tickRate(b.id, 'star', false);
+            } else {
+                untickRate(b.id, 'star', false);
+            }
+
+            if (b.rejected) {
+                tickRate(b.id, 'reject', false);
+            } else {
+                untickRate(b.id, 'reject', false);
+            }
         });
+        // $.each(result["results"], function (a, b) {
+        // });
     }
     else{
         // if no result found for the given filter, then display no result

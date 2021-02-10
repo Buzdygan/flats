@@ -9,6 +9,7 @@ from flat_crawler.utils.location import extract_locations_from_text, fetch_locat
 from flat_crawler.utils.extract_info import extract_keys_from_text
 from flat_crawler.utils.text_utils import get_colored_text, TextColor, simplify_text
 from flat_crawler.models import FlatPost, Location
+from flat_crawler.constants import SELECTED_DISTRICTS
 
 
 
@@ -21,10 +22,14 @@ class Command(BaseCommand):
         parser.add_argument(
             '--geodata', action='store_true', help='Fetch geodata for locations',
         )
+        parser.add_argument(
+            '--parse-geodata', action='store_true', help='Parse geodata for locations',
+        )
 
     def handle(self, *args, **options):
         limit = options['limit']
         posts = FlatPost.objects.annotate(num_locations=Count('locations'))
+        posts = posts.filter(district__in=SELECTED_DISTRICTS)
         if options['locations']:
             posts = posts.filter(num_locations=0)
             self._extract_locations(posts=posts, limit=limit)
@@ -33,6 +38,9 @@ class Command(BaseCommand):
                 num_posts=Count('flatpost')
             ).filter(num_posts__gt=0, geolocation_data__isnull=True)
             self._extract_geodata(locations, limit=limit)
+        elif options['parse_geodata']:
+            locations = Location.objects.filter(geolocation_data__isnull=False)
+            self._parse_geodata(locations)
         else:
             self._extract_info(posts=posts.all(), limit=limit)
 
@@ -44,6 +52,30 @@ class Command(BaseCommand):
             fetch_location_geo(location=location, api_key=api_key)
         print(f"Fetched geo data for {num} locations")
 
+    def _parse_geodata(self, locations):
+        parsed = 0
+        for loc in locations:
+            if loc.geolocation_data is None:
+                continue
+            results = loc.geolocation_data['results']
+            try:
+                result = results[0] # ignore additional results
+                geometry = result['geometry']
+                bounds = geometry.get('bounds', geometry['viewport'])
+                loc.lat = geometry['location']['lat']
+                loc.lng = geometry['location']['lng']
+                loc.ne_lat = bounds['northeast']['lat']
+                loc.ne_lng = bounds['northeast']['lng']
+                loc.sw_lat = bounds['southwest']['lat']
+                loc.sw_lng = bounds['southwest']['lng']
+                loc.location_types = ','.join(result['types'])
+                loc.save()
+                parsed += 1
+            except:
+                print(f"Exception for {loc.full_name}\n{loc.geolocation_data}")
+                raise
+        print(f"Successfully parsed {parsed} locations geodata.")
+        
     def _extract_info(self, posts, limit=None):
         num_posts = len(posts)
         all_keys = Counter()

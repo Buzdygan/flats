@@ -62,3 +62,36 @@
     width: 100%;
     color: #000000;
 }
+
+.heart-button {
+    font-size: 200%;
+    border: none;
+    background: none;
+    color: grey;
+  }
+
+.star-button {
+    font-size: 200%;
+    border: none;
+    background: none;
+    color: grey ;
+  }
+
+.reject-button {
+    font-size: 300%;
+    border: none;
+    background: none;
+    color: grey;
+  }
+
+/* .star > button:hover:before {
+    content: "\2605";
+    position: absolute;
+    color: #f2b01e;
+ } */
+
+/* .reject > button:hover:before {
+    content: "\215";
+    position: absolute;
+    color: red;
+ } */

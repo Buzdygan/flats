@@ -1,6 +1,10 @@
 import re
 
 from fuzzysearch import find_near_matches
+from fuzzywuzzy import fuzz
+
+from flat_crawler import exceptions
+from flat_crawler.constants import MINUTE, HOUR, DAY
 
 MIN_SIZE = 10
 MAX_SIZE = 1000
@@ -74,3 +78,31 @@ def get_colored_text(text, colored_ranges, color=TextColor.RED):
         colored_text += TextColor.END
     colored_text += text[curr_end:]
     return colored_text
+
+
+UNIT_TO_SECONDS = {
+    'sekundę': 1,
+    'sekundy': 1,
+    'sekund': 1,
+    'minutę': MINUTE,
+    'minuty': MINUTE,
+    'godzinę': HOUR,
+    'godziny': HOUR,
+    'dni': DAY,
+    'dzień': DAY,
+}
+
+def parse_timedelta_str_to_seconds(timedelta_str: str) -> int:
+    td_str = timedelta_str.lower().replace('temu', ' ')
+    els = td_str.split()
+
+    if len(els) == 1:
+        num = 1
+        unit = els[0]
+    elif len(els) == 2:
+        num = int(els[0])
+        unit = els[1]
+    else:
+        raise exceptions.InvalidTimedeltaStr(f"Wrong timedelta str: {timedelta_str}")
+
+    return num * UNIT_TO_SECONDS[max(UNIT_TO_SECONDS.keys(), key=lambda x: fuzz.ratio(x, unit))]

@@ -3,7 +3,7 @@ import re
 import json
 from io import BytesIO
 from typing import Iterable, Optional, Dict, List
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import fire
 from bs4 import BeautifulSoup
@@ -12,6 +12,8 @@ from dateutil import parser
 
 from flat_crawler.models import FlatPost, Source
 from flat_crawler.crawlers.base_crawler import SoupInfo, BaseCrawler
+from flat_crawler.utils.text_utils import parse_timedelta_str_to_seconds
+from flat_crawler import exceptions
 
 logger = logging.getLogger(__name__)
 
@@ -119,6 +121,16 @@ class GumtreeCrawler(BaseCrawler):
             return json.dumps(details_dict)
 
     def _get_dt_posted(self, soup: SoupInfo) -> Optional[datetime]:
+        creation_date = soup.base.find(class_='creation-date')
+        if creation_date is not None:
+            timedelta_str = creation_date.text
+            try:
+                td_seconds = parse_timedelta_str_to_seconds(timedelta_str)
+                return datetime.now() - timedelta(seconds=td_seconds)
+            except exceptions.InvalidTimedeltaStr as exc:
+                logger.exception(exc)
+                return None
+
         DT_KEY = 'Data dodania'
         details_dict = self._get_details_dict(soup=soup)
         if details_dict is None:

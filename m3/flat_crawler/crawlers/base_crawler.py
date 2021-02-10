@@ -71,8 +71,6 @@ class BaseCrawler(ABC):
             'size_m2': self._get_size_m2,
             'city': self._get_city,
             'district': self._get_district,
-            'sub_district': self._get_sub_district,
-            'street': self._get_street,
             'url': self._get_url,
             'thumbnail_url': self._get_thumbnail_url,
             'thumbnail': self._get_thumbnail,

@@ -16,11 +16,12 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
-from flat_crawler.views import FlatView, FlatList, get_districts
+from flat_crawler.views import FlatView, FlatList, get_districts, update_flat
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', FlatList),
     path('flats/', FlatView.as_view(), name='flatlist'),
-    path('ajax/districts/', get_districts, name='get_districts')
+    path('ajax/districts/', get_districts, name='get_districts'),
+    path('ajax/flatupdate/', update_flat, name='update_flat'),
 ]

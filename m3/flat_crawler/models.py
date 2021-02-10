@@ -1,3 +1,4 @@
+import logging
 import uuid
 import base64
 import textwrap
@@ -6,6 +7,8 @@ import jsonfield
 from django.db import models
 
 from flat_crawler.utils.img_utils import bytes_to_images
+
+logger = logging.getLogger(__name__)
 
 
 class Source(models.TextChoices):
@@ -19,6 +22,12 @@ class Source(models.TextChoices):
     GRATKA = "GTK"
     ADRESOWO = "ADS"
     OKOLICA = "OKO"
+
+
+LOCATION_TYPE_ROUTE = 'route'
+LOCATION_TYPE_PARK = 'park'
+LOCATION_TYPE_SUBWAY = 'subway_station'
+LOCATION_TYPE_TRANSIT = 'transit_station'
 
 
 class Location(models.Model):
@@ -36,7 +45,7 @@ class Location(models.Model):
 
     lat = models.FloatField(null=True)
     lng = models.FloatField(null=True)
-    location_type = models.CharField(max_length=100, null=True)
+    location_types = models.TextField(max_length=100, null=True)
 
     # ne = north east
     ne_lat = models.FloatField(null=True)
@@ -45,27 +54,12 @@ class Location(models.Model):
     sw_lat = models.FloatField(null=True)
     sw_lng = models.FloatField(null=True)
 
-    def get_names_for_matching(self):
-        """ Return versions of location name for purpose of matching. Order is important as first
-            element will be tried first, so it's better to put longer, more defining versions first.
-            Return (name, max levenstein distance allowed)
-        """
-        names_with_dists = []
-        names_with_dists.append((self.full_name, 0))
-        names_with_dists.append((self.by_name, 0))
-        names_with_dists.append((self.short_name, 0))
-
-        # versions easier to match
-        # names_with_dists.append((self.short_name.replace('ul.', '').replace('pl.', '').strip(), 0))
-        # names_with_dists.append((self.by_name.replace('ul.', '').replace('pl.', '').strip(), 0))
-        return names_with_dists
-
 
 class BaseFlatInfo(models.Model):
     size_m2 = models.FloatField(null=True)
     city = models.CharField(max_length=50, null=True)
     district = models.CharField(max_length=50, null=True)
-    locations = models.ManyToManyField(Location, null=True)
+    locations = models.ManyToManyField(Location)
 
     class Meta:
         abstract = True
@@ -81,6 +75,11 @@ class Flat(models.Model):
     original_post = models.ForeignKey('FlatPost', on_delete=models.PROTECT, related_name='+')
     min_price = models.IntegerField(null=True)
     created = models.DateTimeField(auto_now_add=True)
+
+    rejected = models.BooleanField(default=False)
+    starred = models.BooleanField(default=False)
+    hearted = models.BooleanField(default=False)
+    marked_as_duplicate = models.BooleanField(default=False)
 
     @property
     def last_post(self):
@@ -115,6 +114,24 @@ class Flat(models.Model):
     @property
     def district(self):
         return self.original_post.district
+
+    def rate(self, rating_type: str, is_ticked: bool):
+        logger.debug(f"Rate flat: {self.id}, type: {rating_type}, ticked: {is_ticked}")
+        # if we tick one true, others should turn to False
+        if is_ticked:
+            self.hearted = False
+            self.starred = False
+            self.rejected = False
+
+        if rating_type == 'heart':
+            self.hearted = is_ticked
+        elif rating_type == 'star':
+            self.starred = is_ticked
+        elif rating_type == 'reject':
+            self.rejected = is_ticked
+        else:
+            return
+        self.save()
 
 
 class FlatPost(BaseFlatInfo):
