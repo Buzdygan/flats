@@ -1,10 +1,14 @@
+import logging
 import uuid
 import base64
 import textwrap
 
+import jsonfield
 from django.db import models
 
 from flat_crawler.utils.img_utils import bytes_to_images
+
+logger = logging.getLogger(__name__)
 
 
 class Source(models.TextChoices):
@@ -20,18 +24,28 @@ class Source(models.TextChoices):
     OKOLICA = "OKO"
 
 
+LOCATION_TYPE_ROUTE = 'route'
+LOCATION_TYPE_PARK = 'park'
+LOCATION_TYPE_SUBWAY = 'subway_station'
+LOCATION_TYPE_TRANSIT = 'transit_station'
+
+
 class Location(models.Model):
     city = models.CharField(max_length=50, null=True)
     # e.g "ulica Marszałkowska"
     full_name = models.CharField(max_length=80, null=True)
-    # e.g. "przy ul. Marszałkowskiej"
+    # e.g. przy "ul. Marszałkowskiej"
     by_name = models.CharField(max_length=80, null=True)
     # e.g. ul. Marszałkowska
     short_name = models.CharField(max_length=80, null=True)
     # list of districts e.g "Śródmieście, Wola" - not "srodmiescie, wola"
-    districts_local_names = models.TextField(null=True)
+    districts_local_names = models.CharField(max_length=100, null=True)
     # From google api response, see https://developers.google.com/maps/documentation/geocoding/overview
-    geolocation_json = models.TextField(null=True)
+    geolocation_data = jsonfield.JSONField(null=True)
+
+    lat = models.FloatField(null=True)
+    lng = models.FloatField(null=True)
+    location_types = models.TextField(max_length=100, null=True)
 
     # ne = north east
     ne_lat = models.FloatField(null=True)
@@ -45,8 +59,7 @@ class BaseFlatInfo(models.Model):
     size_m2 = models.FloatField(null=True)
     city = models.CharField(max_length=50, null=True)
     district = models.CharField(max_length=50, null=True)
-    sub_district = models.CharField(max_length=50, null=True)
-    street = models.CharField(max_length=50, null=True)
+    locations = models.ManyToManyField(Location)
 
     class Meta:
         abstract = True
@@ -62,6 +75,11 @@ class Flat(models.Model):
     original_post = models.ForeignKey('FlatPost', on_delete=models.PROTECT, related_name='+')
     min_price = models.IntegerField(null=True)
     created = models.DateTimeField(auto_now_add=True)
+
+    rejected = models.BooleanField(default=False)
+    starred = models.BooleanField(default=False)
+    hearted = models.BooleanField(default=False)
+    marked_as_duplicate = models.BooleanField(default=False)
 
     @property
     def last_post(self):
@@ -96,6 +114,24 @@ class Flat(models.Model):
     @property
     def district(self):
         return self.original_post.district
+
+    def rate(self, rating_type: str, is_ticked: bool):
+        logger.debug(f"Rate flat: {self.id}, type: {rating_type}, ticked: {is_ticked}")
+        # if we tick one true, others should turn to False
+        if is_ticked:
+            self.hearted = False
+            self.starred = False
+            self.rejected = False
+
+        if rating_type == 'heart':
+            self.hearted = is_ticked
+        elif rating_type == 'star':
+            self.starred = is_ticked
+        elif rating_type == 'reject':
+            self.rejected = is_ticked
+        else:
+            return
+        self.save()
 
 
 class FlatPost(BaseFlatInfo):

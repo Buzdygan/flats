@@ -17,3 +17,11 @@ class PostURLMissing(CrawlingException):
 
 class PostFailedToSave(CrawlingException):
     pass
+
+
+class NotRecognizedDistrict(Exception):
+    pass
+
+
+class InvalidTimedeltaStr(CrawlingException):
+    pass

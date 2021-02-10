@@ -28,10 +28,3 @@ def get_img_from_url(img_url, resize=None):
     if resize:
         img = img.resize(resize)
     return img
-
-
-MIN_SIZE = 10
-MAX_SIZE = 1000
-MIN_PRICE_PER_M = 3000
-MAX_PRICE_PER_M = 30000
-AVG_PRICE_PER_M = 11000

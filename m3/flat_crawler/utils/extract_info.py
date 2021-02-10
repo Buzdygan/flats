@@ -1,23 +1,56 @@
 
+from typing import NamedTuple, List
+from fuzzysearch import find_near_matches
 
-def deduce_size_from_text(text: str, price: int):
-    regexp = r"[+-]? *((?:\d+(?:\.\d*)?|\.\d+|)(?:[eE][+-]?\d+)?|(?:\d+(?:\,\d*)?|\,\d+|)(?:[eE][+-]?\d+)?)\s*(m2|metrów|metrow|metry|m kw|m.kw.|m kw.|m. kw|mkw)"
 
-    unit_pattern = re.compile(regexp, re.IGNORECASE)
-    found = re.findall(unit_pattern, text)
-    if not found:
-        return
+DEVELOPER_KEY = 'developer'
+BALCONY_KEY = 'balcony'
+FRENCH_BALCONY_KEY = 'french_balcony'
 
-    floats = []
-    for float_str, _ in found:
-        float_str = float_str.replace(',', '.')
-        try:
-            floats.append(float(float_str))
-        except Exception:
-            pass
-    sizes = [size for size in floats if MIN_SIZE <= size <= MAX_SIZE]
-    sizes = [size for size in floats
-             if MIN_PRICE_PER_M <= price / size <= MAX_PRICE_PER_M]
+LOCATION_KEY = 'location'
 
-    if sizes:
-        return min(sizes, key=lambda size: abs(price / size - AVG_PRICE_PER_M))
+
+class Pattern(NamedTuple):
+    key: str # type of info we want to extract
+    word: str
+    max_dist: int = 0
+    lower: bool = False
+
+
+PATTERNS = [
+    Pattern(key=DEVELOPER_KEY, word='deweloper', max_dist=1, lower=True),
+    Pattern(key=DEVELOPER_KEY, word='developer', max_dist=1, lower=True),
+    Pattern(key=BALCONY_KEY, word='balkon', max_dist=0, lower=True),
+    Pattern(key=BALCONY_KEY, word='balkonem', max_dist=0, lower=True),
+    Pattern(key=BALCONY_KEY, word='loggia', max_dist=1, lower=True),
+    Pattern(key=FRENCH_BALCONY_KEY, word='balkon francuski', max_dist=3, lower=True),
+]
+
+LOCATION_PATTERNS = [
+    Pattern(key=LOCATION_KEY, word=word, max_dist=0, lower=True) for word in [
+        'obok', 'przy', 'niedaleko', 'zlokalizowane', 'położone', 'w okolicy', 'na', 'ul.',
+        'ulicy', 'placu',
+    ]
+]
+
+
+def extract_keys_from_text(text: str, patterns=PATTERNS):
+    non_lower_pat = [p for p in patterns if not p.lower]
+    lower_pat = [p for p in patterns if p.lower]
+    keys = set()
+    all_matches = []
+    lower_text = text.lower()
+    for patt in non_lower_pat + lower_pat:
+        if patt.lower:
+            txt = lower_text
+            word = patt.word.lower()
+        else:
+            txt = text
+            word = patt.word
+        if not word:
+            continue
+        matches = find_near_matches(word, txt, max_l_dist=patt.max_dist)
+        if matches:
+            keys.add(patt.key)
+        all_matches.extend(matches)
+    return list(keys), [(m.start, m.end) for m in all_matches]
