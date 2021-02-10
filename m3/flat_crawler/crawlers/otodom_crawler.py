@@ -12,6 +12,10 @@ from flat_crawler.crawlers.base_crawler import SoupInfo, BaseCrawler
 
 logger = logging.getLogger(__name__)
 
+
+MIN_PRICE = 400000
+MAX_PRICE = 1500000
+
 OTODOM_SEARCH_URL = (
     'otodom.pl/sprzedaz/mieszkanie/'
     '?search%5Bfilter_float_price%3Afrom%5D=400000'
@@ -24,21 +28,26 @@ OTODOM_SEARCH_URL = (
     '&locations%5B0%5D%5Bregion_id%5D=7'
     '&locations%5B0%5D%5Bsubregion_id%5D=197'
     '&locations%5B0%5D%5Bcity_id%5D=26'
-    '&locations%5B0%5D%5Bdistrict_id%5D=39'
+    '&locations%5B0%5D%5Bdistrict_id%5D=39' # Mokotów
     '&locations%5B1%5D%5Bregion_id%5D=7'
     '&locations%5B1%5D%5Bsubregion_id%5D=197'
     '&locations%5B1%5D%5Bcity_id%5D=26'
-    '&locations%5B1%5D%5Bdistrict_id%5D=300420'
+    '&locations%5B1%5D%5Bdistrict_id%5D=300420' # Stary Żoliborz
     '&locations%5B2%5D%5Bregion_id%5D=7'
     '&locations%5B2%5D%5Bsubregion_id%5D=197'
     '&locations%5B2%5D%5Bcity_id%5D=26'
-    '&locations%5B2%5D%5Bdistrict_id%5D=961'
+    '&locations%5B2%5D%5Bdistrict_id%5D=961' # Muranów
     '&locations%5B3%5D%5Bregion_id%5D=7'
     '&locations%5B3%5D%5Bsubregion_id%5D=197'
     '&locations%5B3%5D%5Bcity_id%5D=26'
-    '&locations%5B3%5D%5Bdistrict_id%5D=44'
+    '&locations%5B3%5D%5Bdistrict_id%5D=44' # Śródmieście
+    '&locations%5B3%5D%5Bregion_id%5D=7'
+    '&locations%5B3%5D%5Bsubregion_id%5D=197'
+    '&locations%5B3%5D%5Bcity_id%5D=26'
+    '&locations%5B3%5D%5Bdistrict_id%5D=38' # Bielany
     '&page=%(page_num)d'
-)
+) 
+
 
 """
 UWAGI:
@@ -58,13 +67,19 @@ https://www.otodom.pl/sprzedaz/mieszkanie/?search%5Bfilter_float_price%3Afrom%5D
 
 
 class OtodomCrawler(BaseCrawler):
-    SOURCE = Source.GUMTREE
+    SOURCE = Source.OTODOM
 
     def __init__(
         self,
+        district: str,
+        min_price: int=MIN_PRICE,
+        max_price: int=MAX_PRICE,
         **kwargs
     ):
         super().__init__(**kwargs)
+        self._district = district
+        self._min_price = min_price
+        self._max_price = max_price
 
     def _get_main_url(self, page_num):
         """ Return search page url for given page number. """
@@ -72,36 +87,42 @@ class OtodomCrawler(BaseCrawler):
 
     def _extract_posts_from_page_soup(self, page_soup: BeautifulSoup) -> Iterable[BeautifulSoup]:
         """ Return list of page soups for each offer on the search page. """
-        raise NotImplementedError
+        return page_soup.findAll("article", {"class":"offer-item"})
 
     def _get_url(self, soup: SoupInfo) -> Optional[str]:
         """ Get url of details page of a given offer. """
-        return None
+        return soup.get('data-url')
 
     def _get_heading(self, soup: SoupInfo) -> Optional[str]:
         """ Get title of offer. """
-        return None
+        return soup.find('span', {'class':'offer-item-title'}).text
 
     def _get_district(self, soup: SoupInfo) -> Optional[str]:
-        return None
+        location = re.search('Warszawa.+', soup.header.p.text)
+        return location.group().split()[1]
 
     def _get_price(self, soup: SoupInfo) -> Optional[int]:
-        return None
+        price = soup.find('li', {'class':'offer-item-price'}).text
+        return int(price.strip().replace('zł','').replace(' ', ''))
 
     def _get_thumbnail_url(self, soup: SoupInfo) -> Optional[str]:
         """ Url of thumbnail image next to offer title. """
-        return None
+        return soup.figure.a.get('href')
 
     def _get_desc(self, soup: SoupInfo) -> Optional[str]:
         """ Full description of offer. """
+        # available description only on detailed flat page
         return None
 
     def _get_size_m2(self, soup: SoupInfo) -> Optional[int]:
-        return None
+        return int(soup.find('li', {'class':'offer-item-area'}).text.split()[0])
 
     def _get_sub_district(self, soup: SoupInfo) -> Optional[str]:
-        # TODO Implement
-        return None
+        sub_district = self._get_district.location.group().split()
+        if len(sub_district) > 2:
+            return sub_district[2]
+        else:
+            return None
 
     def _get_street(self, soup: SoupInfo) -> Optional[str]:
         # TODO Implement
@@ -109,7 +130,14 @@ class OtodomCrawler(BaseCrawler):
 
     def _get_img_urls(self, soup: SoupInfo) -> Optional[List[str]]:
         """ Get urls of images on post details page. """
+        #TODO - very deep nested thumbnails 
         return None
+
+    def _get_details_dict(self, soup: SoupInfo) -> Optional[Dict]:
+        if soup.detailed is not None:
+            details_dict = {}
+            # TODO
+            #return details_dict
 
     def _get_info_dict_json(self, soup: SoupInfo) -> Optional[str]:
         """ Dump to json dictionary any additional information that doesn't fit into models fields.
