@@ -123,6 +123,7 @@ class GumtreeCrawler(BaseCrawler):
     def _get_dt_posted(self, soup: SoupInfo) -> Optional[datetime]:
         creation_date = soup.base.find(class_='creation-date')
         if creation_date is not None:
+            print("CREATION DATE", creation_date.text)
             timedelta_str = creation_date.text
             try:
                 td_seconds = parse_timedelta_str_to_seconds(timedelta_str)
@@ -130,6 +131,8 @@ class GumtreeCrawler(BaseCrawler):
             except exceptions.InvalidTimedeltaStr as exc:
                 logger.exception(exc)
                 return None
+        else:
+            print("NO CREATION DATE")
 
         DT_KEY = 'Data dodania'
         details_dict = self._get_details_dict(soup=soup)

@@ -7,31 +7,35 @@ from flat_crawler.crawlers.otodom_crawler import OtodomCrawler
 from flat_crawler.crawlers.base_crawler import DistrictFilter
 from flat_crawler.constants import SRODMIESCIE, MOKOTOW, ZOLIBORZ, OCHOTA, BIELANY, IGNORED_DISTRICTS
 
+DEFAULT_MIN_PRICE = 400000
+DEFAULT_MAX_PRICE = 1200000
 
 
 
 class Command(BaseCommand):
     def add_arguments(self, parser):
-        parser.add_argument('--page-start', nargs='?', type=int, default=1)
-        parser.add_argument('--page-end', nargs='?', type=int)
+        parser.add_argument('--lookback-days', nargs='?', type=int)
+        parser.add_argument('--page-start', nargs='?', type=int)
+        parser.add_argument('--page-stop', nargs='?', type=int)
         parser.add_argument('--otodom', action='store_true')
 
     def handle(self, *args, **options):
         # for district in [SRODMIESCIE, MOKOTOW, ZOLIBORZ, OCHOTA, BIELANY]:
+        crawler_params = {
+            'min_price': DEFAULT_MIN_PRICE,
+            'max_price': DEFAULT_MAX_PRICE,
+            'post_filter': DistrictFilter(ignored_districts=IGNORED_DISTRICTS),
+        }
+        for key in ['page_start', 'page_stop', 'lookback_days']:
+            if key in options:
+                crawler_params[key] = options[key]
+
         if options.get('otodom'):
             OtodomCrawler(
-                page_start=options.get('page_start', 1),
-                page_stop=options.get('page_end', 10),
-                allow_pages_without_new_posts=True,
-                post_filter=DistrictFilter(ignored_districts=IGNORED_DISTRICTS),
+                **crawler_params,
             ).fetch_new_posts()
         else:
             GumtreeCrawler(
+                **crawler_params,
                 district='warszawa',
-                page_start=options.get('page_start', 1),
-                page_stop=options.get('page_end', 10),
-                allow_pages_without_new_posts=True,
-                min_price=450000,
-                max_price=1000000,
-                post_filter=DistrictFilter(ignored_districts=IGNORED_DISTRICTS),
             ).fetch_new_posts()
