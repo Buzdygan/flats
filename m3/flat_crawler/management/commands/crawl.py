@@ -20,21 +20,18 @@ class Command(BaseCommand):
         # for district in [SRODMIESCIE, MOKOTOW, ZOLIBORZ, OCHOTA, BIELANY]:
         if options.get('otodom'):
             OtodomCrawler(
-                start_dt=datetime(2020, 1, 1),
                 page_start=options.get('page_start', 1),
                 page_stop=options.get('page_end', 10),
                 allow_pages_without_new_posts=True,
                 post_filter=DistrictFilter(ignored_districts=IGNORED_DISTRICTS),
             ).fetch_new_posts()
         else:
-            for district in ['warszawa']:
-                GumtreeCrawler(
-                    district=district,
-                    start_dt=datetime(2020, 1, 1),
-                    page_start=options.get('page_start', 1),
-                    page_stop=options.get('page_end', 10),
-                    allow_pages_without_new_posts=True,
-                    min_price=450000,
-                    max_price=1000000,
-                    post_filter=DistrictFilter(ignored_districts=IGNORED_DISTRICTS),
-                ).fetch_new_posts()
+            GumtreeCrawler(
+                district='warszawa',
+                page_start=options.get('page_start', 1),
+                page_stop=options.get('page_end', 10),
+                allow_pages_without_new_posts=True,
+                min_price=450000,
+                max_price=1000000,
+                post_filter=DistrictFilter(ignored_districts=IGNORED_DISTRICTS),
+            ).fetch_new_posts()

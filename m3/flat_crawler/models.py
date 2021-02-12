@@ -70,6 +70,13 @@ class PostHash(models.Model):
     post_hash = models.CharField(max_length=64, unique=True)
 
 
+class CrawlingLog(models.Model):
+    source = models.CharField(max_length=6, choices=Source.choices)
+    # Crawled all posts posted on this date in the given source.
+    date_fully_crawled = models.DateField()
+    created = models.DateTimeField(auto_now_add=True)
+
+
 class Flat(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     original_post = models.ForeignKey('FlatPost', on_delete=models.PROTECT, related_name='+')

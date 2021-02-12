@@ -4,13 +4,13 @@ import hashlib
 from abc import ABC
 from io import BytesIO
 from typing import Iterable, Tuple, NamedTuple, Optional, List
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from PIL import Image
 from bs4 import BeautifulSoup
 
 from flat_crawler.constants import THUMBNAIL_SIZE, CITY_WARSAW
-from flat_crawler.models import FlatPost, PostHash
+from flat_crawler.models import FlatPost, PostHash, CrawlingLog
 from flat_crawler.crawlers.helpers import get_soup_from_url
 from flat_crawler.utils.img_utils import get_img_bytes_from_url, img_urls_to_bytes
 from flat_crawler.utils.text_utils import deduce_size_from_text
@@ -50,14 +50,14 @@ class BaseCrawler(ABC):
 
     def __init__(
         self,
-        start_dt: datetime,
+        lookback_days=15,
         post_filter=None,
         allow_pages_without_new_posts=False,
         page_start=1,
         page_stop=10,
         city=CITY_WARSAW,
     ):
-        self._start_dt = start_dt
+        self._fetch_posts_since_date = (datetime.now() - timedelta(days=lookback_days)).date()
         self._post_filter = post_filter if post_filter is not None else NoopFilter()
         self._allow_pages_without_new_posts = allow_pages_without_new_posts
         self._page_start = page_start
@@ -83,6 +83,8 @@ class BaseCrawler(ABC):
         }
 
     def fetch_new_posts(self):
+        triggered_dt = datetime.now()
+        # This assumes going back in time.
         for post_page_url in self._get_post_pages_to_crawl():
             had_new_posts, oldest_dt = self._parse_post_page(
                 post_page_url=post_page_url
@@ -91,9 +93,16 @@ class BaseCrawler(ABC):
                 logger.info(f"Stop crawling, {post_page_url} didn't have new posts")
                 break
 
-            if oldest_dt < self._start_dt:
+            if oldest_dt.date() <= self._fetch_posts_since_date:
                 logger.info(f"Stop crawling, fetched all posts since {oldest_dt}")
                 break
+
+            CrawlingLog(
+                source=self.SOURCE, triggered_dt=triggered_dt, oldest_post_dt=oldest_post_dt
+            ).save()
+
+    def _save_crawling_log(self, date_crawled):
+        CrawlingLog.objects.get_or_create(source=self.SOURCE, date_fully_crawled=date_crawled)
 
     def _get_post_pages_to_crawl(self):
         return [
