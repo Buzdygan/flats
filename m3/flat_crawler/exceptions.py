@@ -14,6 +14,9 @@ class PostHeadingMissing(CrawlingException):
 class PostURLMissing(CrawlingException):
     pass
 
+class PostDTPostedMissing(CrawlingException):
+    pass
+
 
 class PostFailedToSave(CrawlingException):
     pass

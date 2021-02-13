@@ -5,9 +5,11 @@ from functools import reduce
 import requests
 from django.db.models import Q
 from urllib import parse
+from shapely.geometry import Point
+from shapely.geometry.polygon import Polygon
 
 import flat_crawler.constants as ct
-from flat_crawler.models import Location, FlatPost
+from flat_crawler.models import Location, FlatPost, SearchArea
 from flat_crawler import exceptions
 from flat_crawler.utils.extract_info import extract_keys_from_text, Pattern, LOCATION_PATTERNS
 from flat_crawler.utils.text_utils import simplify_text
@@ -149,3 +151,15 @@ def fetch_location_geo(location, api_key):
         except Exception as exc:
             logger.exception(f"Couldn't fetch geo data for location: {location.full_name}")
             raise
+
+
+def location_in_area(location: Location, area: Polygon) -> bool:
+    points = [
+        Point(location.lng, location.lat),
+    ]
+
+
+
+
+def get_posts_in_search_area(search_area: SearchArea):
+    area_polygon = Polygon(search_area.points)

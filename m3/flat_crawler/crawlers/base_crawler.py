@@ -4,13 +4,14 @@ import hashlib
 from abc import ABC
 from io import BytesIO
 from typing import Iterable, Tuple, NamedTuple, Optional, List
-from datetime import datetime
+import datetime
+from datetime import timedelta
 
 from PIL import Image
 from bs4 import BeautifulSoup
 
 from flat_crawler.constants import THUMBNAIL_SIZE, CITY_WARSAW
-from flat_crawler.models import FlatPost, PostHash
+from flat_crawler.models import FlatPost, PostHash, CrawlingLog
 from flat_crawler.crawlers.helpers import get_soup_from_url
 from flat_crawler.utils.img_utils import get_img_bytes_from_url, img_urls_to_bytes
 from flat_crawler.utils.text_utils import deduce_size_from_text
@@ -44,20 +45,23 @@ class DistrictFilter(BasePostFilter):
             return True
         return False
 
+DEFAULT_PAGE_STOP = 100
+DEFAULT_LOOKBACK_DAYS = 7
+
 
 class BaseCrawler(ABC):
     SOURCE = None
 
     def __init__(
         self,
-        start_dt: datetime,
+        lookback_days=DEFAULT_LOOKBACK_DAYS,
         post_filter=None,
-        allow_pages_without_new_posts=False,
+        allow_pages_without_new_posts=True,
         page_start=1,
-        page_stop=10,
+        page_stop=DEFAULT_PAGE_STOP,
         city=CITY_WARSAW,
     ):
-        self._start_dt = start_dt
+        self._fetch_posts_since_date = datetime.date.today() - timedelta(days=lookback_days)
         self._post_filter = post_filter if post_filter is not None else NoopFilter()
         self._allow_pages_without_new_posts = allow_pages_without_new_posts
         self._page_start = page_start
@@ -83,29 +87,65 @@ class BaseCrawler(ABC):
         }
 
     def fetch_new_posts(self):
+        crawl_from_date = self._get_date_to_crawl_from()
+        logger.info(
+            f"Crawling all posts on {self.SOURCE} since {crawl_from_date}, crawl_id: {self._get_crawl_id()}"
+        )
+        newest_dt = datetime.datetime(1900, 1, 1)
+        oldest_dt = datetime.datetime.now()
+        # This assumes going back in time.
         for post_page_url in self._get_post_pages_to_crawl():
-            had_new_posts, oldest_dt = self._parse_post_page(
-                post_page_url=post_page_url
+            print('DATE RANGE', oldest_dt, newest_dt)
+            had_new_posts, newest_dt, oldest_dt = self._parse_post_page(
+                post_page_url=post_page_url,
+                newest_post_dt=newest_dt,
+                oldest_post_dt=oldest_dt
             )
+
+            print('DATE RANGE 2', oldest_dt, newest_dt)
+            self._save_crawling_log(oldest_crawled_dt=oldest_dt, newest_crawled_dt=newest_dt)
+
             if not self._allow_pages_without_new_posts and not had_new_posts:
                 logger.info(f"Stop crawling, {post_page_url} didn't have new posts")
                 break
 
-            if oldest_dt < self._start_dt:
+            if oldest_dt.date() < crawl_from_date:
                 logger.info(f"Stop crawling, fetched all posts since {oldest_dt}")
                 break
 
-    def _get_post_pages_to_crawl(self):
-        return [
-            self._get_main_url(page_num=page)
-            for page in range(self._page_start, self._page_stop + 1)
-        ]
+    def _get_crawl_id(self) -> str:
+        return ""
 
-    def _parse_post_page(self, post_page_url: str):
+    def _save_crawling_log(self, oldest_crawled_dt, newest_crawled_dt):
+        crawl_id = self._get_crawl_id()
+        date_crawled = oldest_crawled_dt.date() + timedelta(days=1)
+        while date_crawled < newest_crawled_dt.date():
+            _, new_date = CrawlingLog.objects.get_or_create(
+                source=self.SOURCE, crawl_id=crawl_id, date_fully_crawled=date_crawled
+            )
+            if new_date:
+                logger.info(f"Crawled all posts from {date_crawled} on {self.SOURCE}")
+            date_crawled += timedelta(days=1)
+
+    def _get_date_to_crawl_from(self):
+        crawl_id = self._get_crawl_id()
+        dates_crawled = set(CrawlingLog.objects.filter(
+            source=self.SOURCE, crawl_id=crawl_id, date_fully_crawled__gte=self._fetch_posts_since_date
+        ).values_list('date_fully_crawled', flat=True))
+        date = self._fetch_posts_since_date
+        while date < datetime.date.today() and date in dates_crawled:
+            date += timedelta(days=1)
+        return date
+
+    def _get_post_pages_to_crawl(self):
+        for page_num in range(self._page_start, self._page_stop + 1):
+            yield self._get_main_url(page_num=page_num)
+
+    def _parse_post_page(self, post_page_url: str, newest_post_dt, oldest_post_dt):
         logger.info(f"Parsing posts on page: {post_page_url}")
         soup = get_soup_from_url(url=post_page_url)
         new_posts = False
-        oldest_post = datetime.now()
+        dt_posted_found = False
         for post_soup in self._extract_posts_from_page_soup(page_soup=soup):
             soup_info = SoupInfo(base=post_soup, detailed=None)
             try:
@@ -116,6 +156,10 @@ class BaseCrawler(ABC):
             if self._ignore_post(post=post_sketch):
                 continue
             self._validate_post(source_url=post_page_url, post=post_sketch)
+            if post_sketch.dt_posted:
+                dt_posted_found = True
+                oldest_post_dt = min(oldest_post_dt, post_sketch.dt_posted)
+                newest_post_dt = max(newest_post_dt, post_sketch.dt_posted)
             post_hash, is_present = self._get_post_hash(post=post_sketch)
             if is_present:
                 logger.info("Skipping post, already present.")
@@ -123,15 +167,17 @@ class BaseCrawler(ABC):
             new_posts = True
             post_sketch.post_hash = post_hash
             post_sketch.post_soup = post_soup.encode()
-            self._process_post_sketch(post_sketch=post_sketch, base_soup=post_soup)
-            if not post_sketch.dt_posted:
-                logger.warning(
-                    f"Date added not found for post: {post_sketch}. Setting to {oldest_post}"
-                )
-                post_sketch.dt_posted = oldest_post
-            self._save_post(post=post_sketch)
-            oldest_post = min(oldest_post, post_sketch.dt_posted)
-        return new_posts, oldest_post
+            try:
+                self._process_post_sketch(post_sketch=post_sketch, base_soup=post_soup)
+                self._save_post(post=post_sketch)
+            except Exception as exc:
+                logger.exception(exc)
+                continue
+        if not dt_posted_found:
+            raise exceptions.PostDTPostedMissing(
+                f"No post had dt_posted extracted on {post_page_url}"
+            )
+        return new_posts, newest_post_dt, oldest_post_dt
 
     def _parse_soup_info(
         self,
@@ -252,5 +298,5 @@ class BaseCrawler(ABC):
     def _get_info_dict_json(self, soup: SoupInfo) -> Optional[str]:
         return None
 
-    def _get_dt_posted(self, soup: SoupInfo) -> Optional[datetime]:
+    def _get_dt_posted(self, soup: SoupInfo) -> Optional[datetime.datetime]:
         return None
