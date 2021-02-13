@@ -8,9 +8,10 @@ from django.db.models import Count
 from flat_crawler.utils.location import extract_locations_from_text, fetch_location_geo, get_geoapi_key
 from flat_crawler.utils.extract_info import extract_keys_from_text
 from flat_crawler.utils.text_utils import get_colored_text, TextColor, simplify_text
-from flat_crawler.models import FlatPost, Location
+from flat_crawler.models import FlatPost, Location, SearchArea
 from flat_crawler.constants import SELECTED_DISTRICTS
 
+SEARCH_AREAS_FILENAME = '../various/maps/maps_polygons.txt'
 
 
 class Command(BaseCommand):
@@ -24,6 +25,9 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             '--parse-geodata', action='store_true', help='Parse geodata for locations',
+        )
+        parser.add_argument(
+            '--read-search-areas', action='store_true', help='Read search area files',
         )
 
     def handle(self, *args, **options):
@@ -41,8 +45,31 @@ class Command(BaseCommand):
         elif options['parse_geodata']:
             locations = Location.objects.filter(geolocation_data__isnull=False)
             self._parse_geodata(locations)
+        elif options['read_search_areas']:
+            self._read_search_areas()
         else:
             self._extract_info(posts=posts.all(), limit=limit)
+
+    def _read_search_areas(self):
+
+        def _save_area(name, points):
+            SearchArea.objects.filter(name=name).delete()
+            SearchArea(name=name, points=points).save()
+
+        curr_name = None
+        curr_points = []
+        with open(SEARCH_AREAS_FILENAME, 'r') as f:
+            for line in f:
+                sline = line.strip()
+                if sline.startswith('<end>'):
+                    if len(curr_points) > 2:
+                        _save_area(curr_name, curr_points)
+                elif sline.startswith('<name>'):
+                    curr_name = sline[len('<name>'):]
+                    curr_points = []
+                else:
+                    lng, lat, _ = sline.split(',')
+                    curr_points.append((float(lng), float(lat)))
 
     def _extract_geodata(self, locations, limit=None):
         api_key = get_geoapi_key()

@@ -88,17 +88,23 @@ class BaseCrawler(ABC):
 
     def fetch_new_posts(self):
         crawl_from_date = self._get_date_to_crawl_from()
-        logger.info(f"Crawling all posts on {self.SOURCE} since {crawl_from_date}")
+        logger.info(
+            f"Crawling all posts on {self.SOURCE} since {crawl_from_date}, crawl_id: {self._get_crawl_id()}"
+        )
         newest_dt = datetime.datetime(1900, 1, 1)
         oldest_dt = datetime.datetime.now()
         # This assumes going back in time.
         for post_page_url in self._get_post_pages_to_crawl():
+            print('DATE RANGE', oldest_dt, newest_dt)
             had_new_posts, newest_dt, oldest_dt = self._parse_post_page(
                 post_page_url=post_page_url,
                 newest_post_dt=newest_dt,
                 oldest_post_dt=oldest_dt
             )
+
+            print('DATE RANGE 2', oldest_dt, newest_dt)
             self._save_crawling_log(oldest_crawled_dt=oldest_dt, newest_crawled_dt=newest_dt)
+
             if not self._allow_pages_without_new_posts and not had_new_posts:
                 logger.info(f"Stop crawling, {post_page_url} didn't have new posts")
                 break
@@ -107,19 +113,24 @@ class BaseCrawler(ABC):
                 logger.info(f"Stop crawling, fetched all posts since {oldest_dt}")
                 break
 
+    def _get_crawl_id(self) -> str:
+        return ""
+
     def _save_crawling_log(self, oldest_crawled_dt, newest_crawled_dt):
+        crawl_id = self._get_crawl_id()
         date_crawled = oldest_crawled_dt.date() + timedelta(days=1)
         while date_crawled < newest_crawled_dt.date():
             _, new_date = CrawlingLog.objects.get_or_create(
-                source=self.SOURCE, date_fully_crawled=date_crawled
+                source=self.SOURCE, crawl_id=crawl_id, date_fully_crawled=date_crawled
             )
             if new_date:
                 logger.info(f"Crawled all posts from {date_crawled} on {self.SOURCE}")
             date_crawled += timedelta(days=1)
 
     def _get_date_to_crawl_from(self):
+        crawl_id = self._get_crawl_id()
         dates_crawled = set(CrawlingLog.objects.filter(
-            source=self.SOURCE, date_fully_crawled__gte=self._fetch_posts_since_date
+            source=self.SOURCE, crawl_id=crawl_id, date_fully_crawled__gte=self._fetch_posts_since_date
         ).values_list('date_fully_crawled', flat=True))
         date = self._fetch_posts_since_date
         while date < datetime.date.today() and date in dates_crawled:
@@ -156,8 +167,12 @@ class BaseCrawler(ABC):
             new_posts = True
             post_sketch.post_hash = post_hash
             post_sketch.post_soup = post_soup.encode()
-            self._process_post_sketch(post_sketch=post_sketch, base_soup=post_soup)
-            self._save_post(post=post_sketch)
+            try:
+                self._process_post_sketch(post_sketch=post_sketch, base_soup=post_soup)
+                self._save_post(post=post_sketch)
+            except Exception as exc:
+                logger.exception(exc)
+                continue
         if not dt_posted_found:
             raise exceptions.PostDTPostedMissing(
                 f"No post had dt_posted extracted on {post_page_url}"

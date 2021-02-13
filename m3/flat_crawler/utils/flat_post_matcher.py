@@ -120,8 +120,8 @@ image_matching_engine = ImageMatchingEngine(stop_early=True)
 
 class MatchingEngine(object):
     MATCHERS_CONFIG = [
-        (ImageMatcher, {'matching_engine': image_matching_engine}),
         (BaseInfoMatcher, {}),
+        (ImageMatcher, {'matching_engine': image_matching_engine}),
     ]
 
     def __init__(self, match_broken=False):
@@ -185,6 +185,9 @@ class MatchingEngine(object):
             main_flat = flats[0]
             for flat in flats[1:]:
                 logger.info(f"Merging flat {flat} into {main_flat}")
+                if flat.rejected and not main_flat.hearted and not main_flat.starred:
+                    main_flat.rejected = True
+                    main_flat.save()
                 for related_post in flat.flatpost_set.all():
                     related_post.flat = main_flat
                     related_post.is_original_post = False
@@ -217,6 +220,8 @@ class MatchingEngine(object):
         flat_q = FlatPost.objects.filter(is_original_post=True)
         flat_q = flat_q.filter(size_m2__gte=post.size_m2 - 1)
         flat_q = flat_q.filter(size_m2__lte=post.size_m2 + 1)
+        flat_q = flat_q.filter(price__lte=post.price + 100000)
+        flat_q = flat_q.filter(price__gte=post.price - 100000)
         return flat_q
 
     def _find_matches(self, post: FlatPost) -> Optional[Iterable[FlatPost]]:

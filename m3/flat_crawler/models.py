@@ -55,6 +55,15 @@ class Location(models.Model):
     sw_lng = models.FloatField(null=True)
 
 
+class SearchArea(models.Model):
+    name = models.CharField(max_length=80)
+    # list of float pairs (lng, lat) (order is important)
+    points = jsonfield.JSONField(null=True)
+
+    def contains_point(self, lng, lat):
+        pass
+
+
 class BaseFlatInfo(models.Model):
     size_m2 = models.FloatField(null=True)
     city = models.CharField(max_length=50, null=True)
@@ -72,6 +81,8 @@ class PostHash(models.Model):
 
 class CrawlingLog(models.Model):
     source = models.CharField(max_length=6, choices=Source.choices)
+    # Used to differentiate between different query urls on the same source
+    crawl_id = models.CharField(max_length=200)
     # Crawled all posts posted on this date in the given source.
     date_fully_crawled = models.DateField()
     created = models.DateTimeField(auto_now_add=True)
@@ -183,12 +194,20 @@ class FlatPost(BaseFlatInfo):
         return bytes_to_images(self.photos_bytes)
 
     def __str__(self):
-        url = textwrap.TextWrapper(
-            width=100,
-            initial_indent='\t',
-            subsequent_indent='\t'
-        ).fill(text=self.url)
-        return f"\n\t{self.heading[:100]}\n{url}\n\t id: {self.id}"
+        if self.heading:
+            return f"{self.heading[:100]}, id={self.id}"
+        else:
+            return f"id={self.id}"
+        # url = textwrap.TextWrapper(
+        #     width=100,
+        #     initial_indent='\t',
+        #     subsequent_indent='\t'
+        # ).fill(text=self.url)
+        # return f"\n\t{self.heading[:100]}\n{url}\n\t id: {self.id}"
+
+
+class MatchingFlatPostGroup(models.Model):
+    posts = models.ManyToManyField(FlatPost)
 
 
 class ImageMatch(models.Model):

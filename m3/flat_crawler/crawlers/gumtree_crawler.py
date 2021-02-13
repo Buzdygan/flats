@@ -14,6 +14,7 @@ from flat_crawler.models import FlatPost, Source
 from flat_crawler.crawlers.base_crawler import SoupInfo, BaseCrawler
 from flat_crawler.utils.text_utils import parse_timedelta_str_to_seconds
 from flat_crawler import exceptions
+from flat_crawler import constants as ct
 
 logger = logging.getLogger(__name__)
 
@@ -24,9 +25,22 @@ MIN_PRICE = 400000
 MAX_PRICE = 1500000
 
 OFFERS_TEMPLATE = ('/s-mieszkania-i-domy-sprzedam-i-kupie/%(district)s/page-%(page)d/'
-                   'v1c9073l3200008p%(page)d?pr=%(min_price)d,%(max_price)d')
+                   '%(district_key)sp%(page)d?pr=%(min_price)d,%(max_price)d')
 
 DISTRICT_PATTERN = r'https://www.gumtree.pl/a-mieszkania-i-domy-sprzedam-i-kupie/(.+?)/.*'
+
+DISTRICT_KEY_DICT = {
+    'warszawa': 'v1c9073l3200008',
+    ct.MOKOTOW: 'v1c9073l3200012',
+    ct.SRODMIESCIE: 'v1c9073l3200017',
+    ct.ZOLIBORZ: 'v1c9073l3200026',
+    ct.OCHOTA: 'v1c9073l3200013',
+    ct.BIELANY: 'v1c9073l3200011',
+}
+
+
+# Can't fetch more pages than this
+DEFAULT_PAGE_STOP = 50
 
 
 class GumtreeCrawler(BaseCrawler):
@@ -37,19 +51,28 @@ class GumtreeCrawler(BaseCrawler):
         district: str,
         min_price: int = MIN_PRICE,
         max_price: int = MAX_PRICE,
+        page_stop=DEFAULT_PAGE_STOP,
         **kwargs
     ):
         super().__init__(**kwargs)
+        if district not in DISTRICT_KEY_DICT:
+            raise Exception(f'District {district} not supported for {self.SOURCE}')
+
         self._district = district
         self._min_price = min_price
         self._max_price = max_price
+        self._page_stop = page_stop
+
+    def _get_crawl_id(self) -> str:
+        return ','.join(map(str, [self._district, self._min_price, self._max_price]))
 
     def _get_main_url(self, page_num):
         return BASE_URL + OFFERS_TEMPLATE % {
             'page': page_num,
             'min_price': self._min_price,
             'max_price': self._max_price,
-            'district': self._district
+            'district': self._district,
+            'district_key': DISTRICT_KEY_DICT[self._district],
         }
 
     def _extract_posts_from_page_soup(self, page_soup: BeautifulSoup) -> Iterable[BeautifulSoup]:

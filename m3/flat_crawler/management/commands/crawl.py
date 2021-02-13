@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand, CommandError
 from flat_crawler.crawlers.gumtree_crawler import GumtreeCrawler
 from flat_crawler.crawlers.otodom_crawler import OtodomCrawler
 from flat_crawler.crawlers.base_crawler import DistrictFilter
-from flat_crawler.constants import SRODMIESCIE, MOKOTOW, ZOLIBORZ, OCHOTA, BIELANY, IGNORED_DISTRICTS
+from flat_crawler import constants as ct
 
 DEFAULT_MIN_PRICE = 400000
 DEFAULT_MAX_PRICE = 1200000
@@ -24,10 +24,10 @@ class Command(BaseCommand):
         crawler_params = {
             'min_price': DEFAULT_MIN_PRICE,
             'max_price': DEFAULT_MAX_PRICE,
-            'post_filter': DistrictFilter(ignored_districts=IGNORED_DISTRICTS),
+            'post_filter': DistrictFilter(ignored_districts=ct.IGNORED_DISTRICTS),
         }
         for key in ['page_start', 'page_stop', 'lookback_days']:
-            if key in options:
+            if key in options and options[key] is not None:
                 crawler_params[key] = options[key]
 
         if options.get('otodom'):
@@ -35,7 +35,8 @@ class Command(BaseCommand):
                 **crawler_params,
             ).fetch_new_posts()
         else:
-            GumtreeCrawler(
-                **crawler_params,
-                district='warszawa',
-            ).fetch_new_posts()
+            for district in [ct.SRODMIESCIE]:
+                GumtreeCrawler(
+                    **crawler_params,
+                    district=district,
+                ).fetch_new_posts()
