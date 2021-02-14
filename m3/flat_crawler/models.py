@@ -7,6 +7,7 @@ import jsonfield
 from django.db import models
 
 from flat_crawler.utils.img_utils import bytes_to_images
+from flat_crawler.constants import IMG_BYTES_DELIM, AREA_STARY_MOKOTOW
 
 logger = logging.getLogger(__name__)
 
@@ -22,12 +23,6 @@ class Source(models.TextChoices):
     GRATKA = "GTK"
     ADRESOWO = "ADS"
     OKOLICA = "OKO"
-
-
-LOCATION_TYPE_ROUTE = 'route'
-LOCATION_TYPE_PARK = 'park'
-LOCATION_TYPE_SUBWAY = 'subway_station'
-LOCATION_TYPE_TRANSIT = 'transit_station'
 
 
 class Location(models.Model):
@@ -54,21 +49,20 @@ class Location(models.Model):
     sw_lat = models.FloatField(null=True)
     sw_lng = models.FloatField(null=True)
 
+    def is_type(self, location_type):
+        return location_type in set(self.location_types.split(','))
+
 
 class SearchArea(models.Model):
     name = models.CharField(max_length=80)
     # list of float pairs (lng, lat) (order is important)
     points = jsonfield.JSONField(null=True)
 
-    def contains_point(self, lng, lat):
-        pass
-
 
 class BaseFlatInfo(models.Model):
     size_m2 = models.FloatField(null=True)
     city = models.CharField(max_length=50, null=True)
     district = models.CharField(max_length=50, null=True)
-    locations = models.ManyToManyField(Location)
 
     class Meta:
         abstract = True
@@ -106,6 +100,14 @@ class Flat(models.Model):
         ).order_by('dt_posted').last()
 
     @property
+    def dt_posted(self):
+        return self.original_post.dt_posted
+
+    @property
+    def date_added(self):
+        return str(self.original_post.dt_posted.date())
+
+    @property
     def url(self):
         return self.last_post.url
 
@@ -116,6 +118,12 @@ class Flat(models.Model):
     @property
     def thumbnail_image(self):
         return base64.b64encode(self.original_post.thumbnail).decode('utf-8')
+
+    @property
+    def photos(self):
+        return [
+            base64.b64encode(photo).decode('utf-8') for photo in self.original_post.photos_bytes.split(IMG_BYTES_DELIM)
+        ]
 
     @property
     def size_m2(self):
@@ -132,6 +140,34 @@ class Flat(models.Model):
     @property
     def district(self):
         return self.original_post.district
+
+    @property
+    def keywords(self):
+        if self.original_post.keywords is None:
+            return ''
+        return ', '.join(self.original_post.keywords.split(','))
+
+    @property
+    def location_names(self):
+        return ', '.join(loc.short_name for loc in self.original_post.locations.all())
+
+    @property
+    def location_score(self):
+        loc_num = self.original_post.locations.count()
+        if loc_num == 0:
+            return 0.00001
+        return sum(x[1] for x in self.original_post.area_scores or []) / loc_num
+
+    @property
+    def location_color(self):
+        if self.location_score == 0:
+            return "red"
+        elif self.location_score < 0.001:
+            return "orange"
+
+        if self.original_post.areas.filter(name=AREA_STARY_MOKOTOW).count() > 0:
+            return "green"
+        return "black"
 
     def rate(self, rating_type: str, is_ticked: bool):
         logger.debug(f"Rate flat: {self.id}, type: {rating_type}, ticked: {is_ticked}")
@@ -168,8 +204,14 @@ class FlatPost(BaseFlatInfo):
 
     dt_posted = models.DateTimeField('date posted', null=True)
 
+    locations = models.ManyToManyField(Location)
+    tried_to_extract_locations = models.BooleanField(default=False)
+    areas = models.ManyToManyField(SearchArea)
+    area_scores = jsonfield.JSONField(null=True)
+
     has_balcony = models.BooleanField(null=True)
     info_dict_json = models.TextField(null=True)
+    keywords = models.TextField(null=True)
 
     details_added = models.BooleanField(default=False)
 

@@ -35,7 +35,7 @@ class Command(BaseCommand):
                 **crawler_params,
             ).fetch_new_posts()
         else:
-            for district in [ct.SRODMIESCIE]:
+            for district in ct.SELECTED_DISTRICTS:
                 GumtreeCrawler(
                     **crawler_params,
                     district=district,

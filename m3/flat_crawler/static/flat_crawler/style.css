@@ -2,6 +2,35 @@
     background: white url("images/kotek.jpg") no-repeat;
 } */
 
+.header {
+    padding: 10px 16px;
+    background: rgb(241, 240, 255);
+    border-bottom: black;
+    color: #000000;
+}
+
+.size-range input[type=number] {
+    width: 50px;
+}
+
+.price-range input[type=number] {
+    width: 80px;
+}
+
+.content {
+    padding: 16px;
+}
+  
+.sticky {
+    position: fixed;
+    top: 0;
+    width: 100%;
+}
+  
+.sticky + .content {
+padding-top: 102px;
+}
+
 .flat-posts {
     padding: 20 100px;
 }
@@ -37,12 +66,24 @@
     color: #000;
 }
 
-.flat-post .text .description {
+/* .flat-post .text .description {
     line-height: 1.40;
+    font-size: 140%;
+} */
+
+.flat-post .text .post-text {
+    line-height: 1.40;
+    font-size: 140%;
 }
 
 .flat-post .info {
     grid-column: 6;
+}
+
+.flat-post .info .date-added {
+    font-size: 100%;
+    font-weight: 900;
+    color: #000000;
 }
 
 .flat-post .info .price-text {
@@ -83,6 +124,32 @@
     background: none;
     color: grey;
   }
+
+.unseen-button {
+    font-size: 200%;
+    border: none;
+    background: none;
+    color: grey;
+  }
+
+.keywords {
+    font-weight: bold;
+    color: blue;
+}
+
+.post-tags {
+    display: flex;
+    justify-content: space-between;
+}
+
+.title {
+    display: flex;
+    justify-content: space-between;
+}
+
+.date-added {
+    font-size: 124%;
+}
 
 /* .star > button:hover:before {
     content: "\2605";

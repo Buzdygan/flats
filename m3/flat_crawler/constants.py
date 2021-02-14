@@ -57,3 +57,23 @@ OTODOM_SEARCH_URL = 'otodom.pl/sprzedaz/mieszkanie/?search%5Bfilter_float_price%
 MINUTE = 60
 HOUR = 60 * MINUTE
 DAY = 24 * HOUR
+
+
+IMG_BYTES_DELIM = b'$!%'
+
+LOCATION_TYPE_ROUTE = 'route'
+LOCATION_TYPE_PARK = 'park'
+LOCATION_TYPE_SUBWAY = 'subway_station'
+LOCATION_TYPE_TRANSIT = 'transit_station'
+
+AREA_STARY_MOKOTOW = 'stary-mokotow'
+BASE_AREA = 'base-area'
+
+
+KAMIENICA_KEY = 'kamienica'
+MODERN_KEY = 'nowoczesne'
+DEVELOPER_KEY = 'deweloper'
+BALCONY_KEY = 'balkon'
+FRENCH_BALCONY_KEY = 'balkon-francuski'
+
+LOCATION_KEY = 'location'
