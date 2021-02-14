@@ -5,6 +5,7 @@ import textwrap
 
 import jsonfield
 from django.db import models
+from urllib import parse
 
 from flat_crawler.utils.img_utils import bytes_to_images
 from flat_crawler.constants import IMG_BYTES_DELIM, AREA_STARY_MOKOTOW
@@ -23,6 +24,11 @@ class Source(models.TextChoices):
     GRATKA = "GTK"
     ADRESOWO = "ADS"
     OKOLICA = "OKO"
+
+
+source_to_name = {
+    Source.GUMTREE: 'gumtree'
+}
 
 
 class Location(models.Model):
@@ -132,6 +138,11 @@ class Flat(models.Model):
     @property
     def heading(self):
         return self.original_post.heading
+
+    @property
+    def title_q(self):
+        source = source_to_name.get(self.original_post.source, '')
+        return parse.quote(f'{source} "{self.heading}"')
 
     @property
     def desc(self):

@@ -184,7 +184,7 @@ class BaseCrawler(ABC):
         soup_info: SoupInfo,
         post: Optional[FlatPost] = None,
     ) -> FlatPost:
-        post = FlatPost() if post is None else post
+        post = FlatPost(source=self.SOURCE) if post is None else post
 
         for field, field_getter in self._field_getters_dict.items():
             if getattr(post, field) is not None:

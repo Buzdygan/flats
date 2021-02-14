@@ -199,6 +199,14 @@ function clickRate(flat_id, rtype) {
     getAPIData();
 }
 
+function clickURL(flat_id, title_q, url) {
+    console.log("clicked: " + flat_id)
+    var url_el = document.getElementById('url:' + flat_id);
+    // url_el.href = `https://www.google.com/search?q=${title_q}`
+    url_el.href = url
+    return false;
+}
+
 function heartFlat(flat_id) {
     clickRate(flat_id, 'heart');
 }
@@ -236,7 +244,9 @@ function putTableData(result) {
                 "<div class='thumbnail'><img src='data:image/png;base64," + b.thumbnail_image + "'></div>" +
                 "<div class='text'>" +
                     "<div class='title'>" + 
-                        "<a class='post-link' href='" + b.url + "'> " + b.heading.substring(0, 60) + "</a>" + 
+                        // "<a class='post-link' href='" + b.url + "'> " + b.heading.substring(0, 60) + "</a>" + 
+                        // "<a class='post-link' href='#null' onclick=clickURL('" + b.id + "') id='url:" + b.id + "'> " + b.heading.substring(0, 60) + "</a>" + 
+                        `<a class='post-link' href='#null' onclick="clickURL('${b.id}', '${b.title_q}', '${b.url}')" id='url:${b.id}'> ` + b.heading.substring(0, 60) + "</a>" + 
                         "<div class='date-added'>" + b.date_added + "</div>" + 
                     "</div>" + 
                     "<div class='post-tags'>" +
