@@ -134,9 +134,9 @@ class OtodomCrawler(BaseCrawler):
 
     def _get_street(self, soup: SoupInfo) -> Optional[str]:
         """Return the street name -if available - of the object."""
-        heading_search = re.search('ul.', self._get_heading(soup).span()
+        heading_search = re.search('ul.', self._get_heading(soup))
         if heading_search:
-            return self._get_heading(soup)[heading_search[0]:]
+            return self._get_heading(soup).split(',')[-1]
 
         map_localisation = soup.detailed.find('a', {'href':'#map'}).text.split()
         for elm in map_localisation:
@@ -163,15 +163,15 @@ class OtodomCrawler(BaseCrawler):
             details_dict[key] = val
         return details_dict
 
-    def _additional_info(self) -> Optional(Dict):
+    def _additional_info(self):
         """Get additional info apart from description part."""
         new_dict = {}
         additional_info = soup.detailed.find('div', class_='ad.ad-features.categorized-list').find_all('div')
-            if additional_info is not None:
-                for elm in additional_info:
-                    category = elm.h3.text
-                    cat_values = elm.ul.find_all('li')
-                    new_dict[category] = cat_values
+        if additional_info is not None:
+            for elm in additional_info:
+                category = elm.h3.text
+                cat_values = elm.ul.find_all('li')
+                new_dict[category] = cat_values
         return new_dict
 
     def _get_info_dict_json(self, soup: SoupInfo) -> Optional[str]:
