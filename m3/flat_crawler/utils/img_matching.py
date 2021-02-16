@@ -115,7 +115,7 @@ class HistComparer(BaseComparer):
 
 class StructSimComparer(BaseComparer):
     COMPARER_ID = 'SsimComparer'
-    FIRST_THRESHOLD = 0.6
+    FIRST_THRESHOLD = 0.5
     CONFIDENT_THRESHOLD = 0.9
 
     def add_image_data(self, img_data: ImageData, image: Image) -> ImageData:

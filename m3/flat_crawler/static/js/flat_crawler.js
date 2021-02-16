@@ -15,6 +15,7 @@ $(document).ready(function () {
 
     get_districts();
 
+
     // on filtering the district input
 
     $('#districts').on('change', function () {
@@ -25,12 +26,83 @@ $(document).ready(function () {
         getAPIData();
     });
 
-    // sort the data according to price/points
+    // sort the data
 
     $('#sort_by').on('change', function () {
         send_data['sort_by'] = this.value;
         getAPIData();
     });
+
+    $('#min_size').on('change', function () {
+        send_data['min_size'] = this.value;
+        getAPIData();
+    });
+
+    $('#max_size').on('change', function () {
+        send_data['max_size'] = this.value;
+        getAPIData();
+    });
+
+    $('#min_price').on('change', function () {
+        send_data['min_price'] = this.value;
+        getAPIData();
+    });
+
+    $('#max_price').on('change', function () {
+        send_data['max_price'] = this.value;
+        getAPIData();
+    });
+
+    $('#heart-filter').on('click', function () {
+        var heart_el = document.getElementById('heart-filter');
+        if (send_data['show_hearted'] != "true") {
+            send_data['show_hearted'] = "true";
+            heart_el.style.color = 'red';
+        } else {
+            send_data['show_hearted'] = "false";
+            heart_el.style.color = 'grey';
+        }
+
+        getAPIData();
+    });
+
+    $('#star-filter').on('click', function () {
+        var star_el = document.getElementById('star-filter');
+        if (send_data['show_starred'] != "true") {
+            send_data['show_starred'] = "true";
+            star_el.style.color = 'gold';
+        } else {
+            send_data['show_starred'] = "false";
+            star_el.style.color = 'grey';
+        }
+
+        getAPIData();
+    });
+
+    $('#reject-filter').on('click', function () {
+        var rej_el = document.getElementById('reject-filter');
+        if (send_data['show_rejected'] != "true") {
+            send_data['show_rejected'] = "true";
+            rej_el.style.color = 'black';
+        } else {
+            send_data['show_rejected'] = "false";
+            rej_el.style.color = 'grey';
+        }
+        getAPIData();
+    });
+
+    $('#unseen-filter').on('click', function () {
+        var uns_el = document.getElementById('unseen-filter');
+        if (send_data['show_unseen'] != "true") {
+            send_data['show_unseen'] = "true";
+            uns_el.style.color = 'blue';
+        } else {
+            send_data['show_unseen'] = "false";
+            uns_el.style.color = 'grey';
+        }
+        getAPIData();
+    });
+
 
     // display the results after reseting the filters
 
@@ -50,10 +122,25 @@ function resetFilters() {
 
     get_districts("all");
 
-    send_data['exclude_rejected'] = 'true';
     send_data['district'] = '';
-    send_data["sort_by"] = '',
+    send_data["sort_by"] = 'Data dodania',
+    send_data['min_size'] = 45;
+    send_data['max_size'] = 85;
+    send_data['min_price'] = 450000;
+    send_data['max_price'] = 1000000;
     send_data['format'] = 'json';
+
+    var star_el = document.getElementById('star-filter');
+    star_el.style.color = "gold"
+    send_data['show_starred'] = 'true'
+
+    var heart_el = document.getElementById('heart-filter');
+    heart_el.style.color = "red"
+    send_data['show_hearted'] = 'true'
+
+    var uns_el = document.getElementById('unseen-filter');
+    uns_el.style.color = "blue"
+    send_data['show_unseen'] = 'true'
 }
 
 
@@ -112,6 +199,14 @@ function clickRate(flat_id, rtype) {
     getAPIData();
 }
 
+function clickURL(flat_id, title_q, url) {
+    console.log("clicked: " + flat_id)
+    var url_el = document.getElementById('url:' + flat_id);
+    // url_el.href = `https://www.google.com/search?q=${title_q}`
+    url_el.href = url
+    return false;
+}
+
 function heartFlat(flat_id) {
     clickRate(flat_id, 'heart');
 }
@@ -140,22 +235,41 @@ function putTableData(result) {
         $("#list_data").show();
         $("#flatlist").html("");  
         $.each(result["results"], function (a, b) {
-            if (b.rejected) {
-                return;
-            }
+            photos_html = "<div>"
+            b.photos.forEach(item => {
+                photos_html = photos_html + "<span><img src='data:image/png;base64," + item + "'></span>"
+            })
+            photos_html += "</div>"
             row = "<div class='flat-post'> " +
                 "<div class='thumbnail'><img src='data:image/png;base64," + b.thumbnail_image + "'></div>" +
                 "<div class='text'>" +
-                    "<div class='title'><a class='post-link' href='" + b.url + "'> " + 
-                        b.heading.substring(0, 60) +
-                    '</a></div>' + 
-                    "<div class='description'>" + b.desc.substring(0, 300) + "</div>" +
+                    "<div class='title'>" + 
+                        // "<a class='post-link' href='" + b.url + "'> " + b.heading.substring(0, 60) + "</a>" + 
+                        // "<a class='post-link' href='#null' onclick=clickURL('" + b.id + "') id='url:" + b.id + "'> " + b.heading.substring(0, 60) + "</a>" + 
+                        `<a class='post-link' href='#null' onclick="clickURL('${b.id}', '${b.title_q}', '${b.url}')" id='url:${b.id}'> ` + b.heading.substring(0, 60) + "</a>" + 
+                        "<div class='date-added'>" + b.date_added + "</div>" + 
+                    "</div>" + 
+                    "<div class='post-tags'>" +
+                    "<span class='locations'>" + 
+                        "<p style='color:" + b.location_color + "'><u>" + b.location_names + "</u></p>" +
+                    "</span>" +
+                    "<span class='keywords'>" + 
+                        "<p>" + b.keywords + "</p>" +
+                    "</span>" +
+                    "</div>" + 
+                    "<div class='post-text'>" +
+                        "<span class='description'>" + b.desc.substring(0, 300) + "</span>" +
+                        "<a class='btn btn-secondary' data-toggle='collapse' data-target='#" + b.id + "'> szczegóły </a>" +
+                        "<div class='collapse' id='" + b.id + "'>" +
+                            "<div>" + b.desc.substring(300) + "</div>" + photos_html +
+                        "</div>" +
+                    "</div>" + 
                 "</div>" +
                 "<div class='info'>" +
-                    "<span class='price-text'>" + Math.ceil(b.min_price / 1000) + " tys. zł </span>" +
+                    "<div class='price-text'>" + Math.ceil(b.min_price / 1000) + " tys. zł </div>" +
                     "<div class='size'>" + b.size_m2 + " m2</div>" +
                     "<div class='district'>" + b.district + "</div>" + 
-                    "<span class='rating'>" +
+                    "<div class='rating'>" +
                         "<span class='heart'>" +
                             "<button class='heart-button' id='heart:" + b.id + "' onclick=heartFlat('" + b.id + "') > &#9829; </button>" + 
                         "</span>" + 
@@ -165,7 +279,7 @@ function putTableData(result) {
                         "<span class='reject'>" +
                             "<button class='reject-button' id='reject:" + b.id + "' onclick=rejectFlat('" + b.id + "') > &#215; </button>" + 
                         "</span>" +
-                    "</span>" +
+                    "</div>" +
                 "</div>"
             "</div>"
             $("#flatlist").append(row);   
