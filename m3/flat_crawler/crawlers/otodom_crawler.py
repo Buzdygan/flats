@@ -48,23 +48,7 @@ OTODOM_SEARCH_URL = (
     '&page=%(page_num)d'
 ) 
 
-
-"""
-UWAGI:
-
-Otodom ma dość uporządkowaną strukturę i mozna wyciagnąć wiele przydatnych informacji.
-Wszystko co nie pasuje do pól modelu, mozna dodac do slownika w metodzie _get_info_dict_json
-Najlepiej przeniesc tam wszystkie dane z tabelki "Szczegóły ogłoszenia", jako nazwa pola: wartość.
-
-Dzielnicę mozna ustawić sobie w bazowym urlu (OTODOM_SEARCH_URL), w tym momencie jest ustawiona
-na czterny główne dzielnice, najlepiej chyba będzie to wyszukiwać dzielnica po dzielnicy.
-
-W szczegolnosci lokalizacja na stronie szczegolow danej oferty, tam często jest nazwa ulicy.
-
-bazowy url w jednym wierszu:
-https://www.otodom.pl/sprzedaz/mieszkanie/?search%5Bfilter_float_price%3Afrom%5D=400000&search%5Bfilter_float_price%3Ato%5D=1300000&search%5Bfilter_float_m%3Afrom%5D=40&search%5Bfilter_float_m%3Ato%5D=90&search%5Bfilter_enum_market%5D=secondary&search%5Bfilter_float_building_floors_num%3Ato%5D=8&search%5Bfilter_float_build_year%3Ato%5D=1960&locations%5B0%5D%5Bregion_id%5D=7&locations%5B0%5D%5Bsubregion_id%5D=197&locations%5B0%5D%5Bcity_id%5D=26&locations%5B0%5D%5Bdistrict_id%5D=39&locations%5B1%5D%5Bregion_id%5D=7&locations%5B1%5D%5Bsubregion_id%5D=197&locations%5B1%5D%5Bcity_id%5D=26&locations%5B1%5D%5Bdistrict_id%5D=300420&locations%5B2%5D%5Bregion_id%5D=7&locations%5B2%5D%5Bsubregion_id%5D=197&locations%5B2%5D%5Bcity_id%5D=26&locations%5B2%5D%5Bdistrict_id%5D=961&locations%5B3%5D%5Bregion_id%5D=7&locations%5B3%5D%5Bsubregion_id%5D=197&locations%5B3%5D%5Bcity_id%5D=26&locations%5B3%5D%5Bdistrict_id%5D=44&page=2
-"""
-
+DEFAULT_PAGE_STOP = 50
 
 class OtodomCrawler(BaseCrawler):
     SOURCE = Source.OTODOM
@@ -74,12 +58,14 @@ class OtodomCrawler(BaseCrawler):
         district: str,
         min_price: int=MIN_PRICE,
         max_price: int=MAX_PRICE,
+        page_stop = DEFAULT_PAGE_STOP,
         **kwargs
     ):
         super().__init__(**kwargs)
         self._district = district
         self._min_price = min_price
         self._max_price = max_price
+        self._page_stop = page_stop
 
     def _get_main_url(self, page_num):
         """ Return search page url for given page number. """
