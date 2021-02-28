@@ -134,7 +134,7 @@ class OtodomCrawler(BaseCrawler):
 
     def _get_img_urls(self, soup: SoupInfo) -> Optional[List[str]]:
         """ Get urls of images on post details page. """
-        images = soup.base.figure.get('data-quick-gallery')
+        images = eval(soup.base.figure.get('data-quick-gallery'))
         urls = [image['photo'].replace('\\/','/') for image in images]
         return urls
 
