@@ -134,8 +134,9 @@ class OtodomCrawler(BaseCrawler):
 
     def _get_img_urls(self, soup: SoupInfo) -> Optional[List[str]]:
         """ Get urls of images on post details page. """
-        #TODO - very deep level of nesting thumbnail on soup.detailed
-        return None
+        images = soup.base.figure.get('data-quick-gallery')
+        urls = [image['photo'].replace('\\/','/') for image in images]
+        return urls
 
     def _get_details_dict(self, soup: SoupInfo) -> Optional[Dict]:
         """Return all details which are available for the offer.""" 
