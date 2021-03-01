@@ -260,6 +260,7 @@ class FlatPost(BaseFlatInfo):
 
 
 class MatchingFlatPostGroup(models.Model):
+    group_id_hash = models.TextField()
     posts = models.ManyToManyField(FlatPost)
 
 

@@ -6,7 +6,7 @@ from typing import Optional, Iterable, List
 import numpy as np
 from django.db.models.query import QuerySet
 
-from flat_crawler.models import Flat, FlatPost
+from flat_crawler.models import Flat, FlatPost, MatchingFlatPostGroup
 from flat_crawler.utils.base_utils import elements_to_str
 from flat_crawler.utils.img_utils import bytes_to_images
 from flat_crawler.utils.img_matching import ImageMatchingEngine, FlatPostImage
@@ -124,8 +124,9 @@ class MatchingEngine(object):
         (ImageMatcher, {'matching_engine': image_matching_engine}),
     ]
 
-    def __init__(self, match_broken=False):
+    def __init__(self, match_broken=False, rematch_mode: bool = False):
         self._match_broken = match_broken
+        self._rematch_mode = rematch_mode
 
     def match_posts(self):
         unmatched_posts = FlatPost.objects.filter(flat__isnull=True)
@@ -142,7 +143,8 @@ class MatchingEngine(object):
         for post in unmatched_posts:
             logger.info(f"Matching post: {post}")
             try:
-                matches, match_type = self._find_matches(post=post)
+                candidates = self._get_candidates(post=post)
+                matches, match_type = self._find_matches(post=post, candidates=candidates)
                 if matches is None:
                     self._create_flat_from_post(post=post)
                     num_created += 1
@@ -175,24 +177,67 @@ class MatchingEngine(object):
     @classmethod
     def merge_multiple_posts(cls, posts: Iterable[FlatPost]):
         posts_str = elements_to_str(posts)
+        posts_without_flat = [post for post in posts if post.flat is None]
         flats = list(set(post.flat for post in posts if post.flat is not None))
         if len(flats) == 0:
             logger.warning(f"Merging posts without flats:\n {posts_str}")
         elif len(flats) == 1:
             logger.warning(f"Merging posts already merged:\n {posts_str}")
+            flat = flats[0]
+            for post in posts_without_flat:
+                post.flat = flat
+                post.save()
         else:
             logger.info(f"Merging posts:\n {posts_str}")
+            flats.sort(key=lambda flat: flat.created)
             main_flat = flats[0]
+            main_flat.hearted = any(flat.hearted for flat in flats)
+            main_flat.starred = not main_flat.hearted and any(flat.starred for flat in flats)
+            main_flat.rejected = (
+                not main_flat.hearted and
+                not main_flat.starred and
+                any(flat.rejected for flat in flats)
+            )
+            main_flat.save()
             for flat in flats[1:]:
                 logger.info(f"Merging flat {flat} into {main_flat}")
-                if flat.rejected and not main_flat.hearted and not main_flat.starred:
-                    main_flat.rejected = True
-                    main_flat.save()
                 for related_post in flat.flatpost_set.all():
                     related_post.flat = main_flat
                     related_post.is_original_post = False
                     related_post.save()
                 flat.delete()
+            for post in posts_without_flat:
+                post.flat = main_flat
+                post.save()
+
+    def rematch_posts(self, rematched_posts: List[FlatPost]):
+        self._rematch_mode = True
+        num_rematched = len(rematched_posts)
+        logger.info(f"Rematching {num_rematched} posts.")
+        failed_matches = []
+        num_rematched = 0
+        num_exceptions = 0
+        for post in rematched_posts:
+            logger.info(f"Rematching post: {post}")
+            try:
+                matches, match_type = self._find_matches(post=post)
+                if matches is None:
+                    continue
+                if len(matches) >= 1:
+                    self._handle_multiple_matches(post=post, matches=matches)
+                    num_rematched += 1
+            except Exception as exc:
+                logger.exception(f"Matching {post} failed with {exc}")
+                post.is_broken = True
+                post.exception_str = str(exc)
+                post.save()
+                num_exceptions += 1
+
+        logger.info(
+            f"Rematching summary:\n"
+            f"{num_rematched} posts rematched.\n"
+            f"{num_exceptions} posts were broken."
+        )
 
     def _match_post_to_existing_flat(self, post: FlatPost, match: FlatPost, match_type: str):
         flat = match.flat
@@ -213,8 +258,14 @@ class MatchingEngine(object):
         post.save()
 
     def _handle_multiple_matches(self, post: FlatPost, matches: Iterable[FlatPost]):
-        matches_ids = ",".join(map(str, (match.id for match in matches)))
-        logger.warning(f"Multiple matches found for post: {post}\nIds: {matches_ids}")
+        posts = [post] + list(matches)
+        self.merge_multiple_posts(posts=posts)
+        # matches_ids = ",".join(sorted(map(str, (p.id for p in posts))))
+        # logger.warning(f"Multiple posts matching: {matches_ids}")
+        # group, created = MatchingFlatPostGroup.objects.get_or_create(group_id_hash=matches_ids)
+        # if created:
+        #     for matched_post in posts:
+        #         group.posts.add(matched_post)
 
     def _get_candidates(self, post: FlatPost):
         flat_q = FlatPost.objects.filter(is_original_post=True)
@@ -224,13 +275,13 @@ class MatchingEngine(object):
         flat_q = flat_q.filter(price__gte=post.price - 100000)
         return flat_q
 
-    def _find_matches(self, post: FlatPost) -> Optional[Iterable[FlatPost]]:
-        assert post.flat is None, "Don't match posts already matched"
-        assert (
-            not post.is_original_post is None
-        ), "Unmatched post has is_original_post=True."
+    def _find_matches(self, post: FlatPost, candidates) -> Optional[Iterable[FlatPost]]:
+        if not self._rematch_mode:
+            assert post.flat is None, "Don't match posts already matched"
+            assert (
+                not post.is_original_post is None
+            ), "Unmatched post has is_original_post=True."
 
-        candidates = self._get_candidates(post=post)
         if candidates.count() > 0:
             assert all(cand.flat is not None for cand in candidates)
             for MatcherCls, config in self.MATCHERS_CONFIG:
