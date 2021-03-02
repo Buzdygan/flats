@@ -195,7 +195,7 @@ class BaseCrawler(ABC):
 
         field_getters_dict = self._field_getters_dict
         if postprocessing:
-            field_getters_dict = self._postprocessing_field_getters_dict
+            field_getters_dict.update(self._postprocessing_field_getters_dict)
 
         for field, field_getter in field_getters_dict.items():
             if getattr(post, field) is not None:
