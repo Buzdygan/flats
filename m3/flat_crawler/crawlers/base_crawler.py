@@ -60,6 +60,7 @@ class BaseCrawler(ABC):
         page_start=1,
         page_stop=DEFAULT_PAGE_STOP,
         city=CITY_WARSAW,
+        **kwargs,
     ):
         self._fetch_posts_since_date = datetime.date.today() - timedelta(days=lookback_days)
         self._post_filter = post_filter if post_filter is not None else NoopFilter()
@@ -81,9 +82,14 @@ class BaseCrawler(ABC):
             'price': self._get_price,
             'heading': self._get_heading,
             'desc': self._get_desc,
-            'photos_bytes': self._get_photos_bytes,
             'info_dict_json': self._get_info_dict_json,
             'dt_posted': self._get_dt_posted,
+        }
+
+        # Those fields will be extracted after initial verification
+        # (only if post hasn't been skipped)
+        self._postprocessing_field_getters_dict = {
+            'photos_bytes': self._get_photos_bytes,
         }
 
     def fetch_new_posts(self):
@@ -183,10 +189,15 @@ class BaseCrawler(ABC):
         self,
         soup_info: SoupInfo,
         post: Optional[FlatPost] = None,
+        postprocessing: bool = False,
     ) -> FlatPost:
         post = FlatPost(source=self.SOURCE) if post is None else post
 
-        for field, field_getter in self._field_getters_dict.items():
+        field_getters_dict = self._field_getters_dict
+        if postprocessing:
+            field_getters_dict = self._postprocessing_field_getters_dict
+
+        for field, field_getter in field_getters_dict.items():
             if getattr(post, field) is not None:
                 # skip as we already have value
                 continue
