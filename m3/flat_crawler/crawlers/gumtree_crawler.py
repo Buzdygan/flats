@@ -105,7 +105,7 @@ class GumtreeCrawler(BaseCrawler):
         if soup.detailed is not None:
             return soup.detailed.find('div', class_='description').text
 
-    def _get_size_m2(self, soup: SoupInfo) -> Optional[int]:
+    def _get_size_m2(self, soup: SoupInfo) -> Optional[float]:
         SIZE_KEY = 'Wielkość (m2)'
         details_dict = self._get_details_dict(soup=soup)
         if details_dict is not None and SIZE_KEY in details_dict:

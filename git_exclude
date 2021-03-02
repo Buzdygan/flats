@@ -10,3 +10,4 @@ __pycache__
 .vscode/
 m3/.ipynb_checkpoints/
 m3/m3/settings.py
+.DS_Store
