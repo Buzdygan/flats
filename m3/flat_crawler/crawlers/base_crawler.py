@@ -211,7 +211,11 @@ class BaseCrawler(ABC):
         post_sketch.post_detailed_soup = detailed_soup.encode()
         soup_info = SoupInfo(base=base_soup, detailed=detailed_soup)
         try:
-            post_sketch = self._parse_soup_info(soup_info=soup_info, post=post_sketch)
+            post_sketch = self._parse_soup_info(
+                soup_info=soup_info,
+                post=post_sketch,
+                postprocessing=True
+            )
             post_sketch.details_added = True
         except exceptions.CrawlingException:
             logger.exception(f"Exception when adding details to post: {post_sketch}")
