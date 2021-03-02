@@ -77,6 +77,7 @@ class BaseFlatInfo(models.Model):
 class PostHash(models.Model):
     source = models.CharField(max_length=6, choices=Source.choices)
     post_hash = models.CharField(max_length=64, unique=True)
+    created = models.DateTimeField(auto_now_add=True)
 
 
 class CrawlingLog(models.Model):
