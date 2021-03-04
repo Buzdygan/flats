@@ -216,6 +216,8 @@ class FlatPost(BaseFlatInfo):
 
     dt_posted = models.DateTimeField('date posted', null=True)
 
+    street = models.CharField(max_length=200, null=True)
+    sub_district = models.CharField(max_length=200, null=True)
     locations = models.ManyToManyField(Location)
     tried_to_extract_locations = models.BooleanField(default=False)
     areas = models.ManyToManyField(SearchArea)

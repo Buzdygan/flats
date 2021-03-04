@@ -26,6 +26,18 @@ class TextColor:
    END = '\033[0m'
 
 
+PL_CHARS_MAP = {
+    'ą': 'a',
+    'ć': 'c',
+    'ę': 'e',
+    'ł': 'l',
+    'ó': 'o',
+    'ś': 's',
+    'ź': 'z',
+    'ż': 'z',
+}
+
+
 def deduce_size_from_text(text: str, price: int):
     regexp = r"[+-]? *((?:\d+(?:\.\d*)?|\.\d+|)(?:[eE][+-]?\d+)?|(?:\d+(?:\,\d*)?|\,\d+|)(?:[eE][+-]?\d+)?)\s*(m2|metrów|metrow|metry|m kw|m.kw.|m kw.|m. kw|mkw)"
 
@@ -55,6 +67,13 @@ def simplify_text(text: str):
     text = ' '.join(re.split(r'[.;!?,%:"]', text))
     words = [w for w in text.split() if len(w) > 1]
     return ' '.join(words)
+
+def normalize_word(word: str):
+    """ Removes special characters, whitespaces and converts polish characters to english. """
+    word = re.sub(r'[.;!?,%:"]', '', word).lower().strip()
+    for pl_c, eng_c in PL_CHARS_MAP.items():
+        word = re.sub(pl_c, eng_c, word)
+    return word
 
 
 def get_colored_text(text, colored_ranges, color=TextColor.RED):

@@ -10,6 +10,7 @@ from dateutil import parser
 from flat_crawler.models import Source
 from flat_crawler.crawlers.base_crawler import SoupInfo
 from flat_crawler.crawlers.timeless_crawler import TimelessCrawler
+from flat_crawler.utils.text_utils import normalize_word
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,8 @@ class OtodomCrawler(TimelessCrawler):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._dt_now = datetime.now()
+        self._field_getters_dict['street'] = self._get_street
+        self._field_getters_dict['sub_district'] = self._get_sub_district
 
     def _get_main_url(self, page_num):
         """ Return search page url for given page number. """
@@ -74,10 +77,13 @@ class OtodomCrawler(TimelessCrawler):
         """ Get a title of offer. """
         return soup.base.find('span', {'class':'offer-item-title'}).text
 
+    def _get_locations(self, soup: SoupInfo) -> List[str]:
+        location = re.search('Warszawa.+', soup.base.header.p.text)
+        return location.group().split()
+
     def _get_district(self, soup: SoupInfo) -> Optional[str]:
         """Get an offer's district name."""
-        location = re.search('Warszawa.+', soup.base.header.p.text)
-        return location.group().split()[1]
+        return normalize_word(self._get_locations(soup=soup)[1])
 
     def _get_price(self, soup: SoupInfo) -> Optional[int]:
         """Get a price of the offer."""
@@ -97,7 +103,6 @@ class OtodomCrawler(TimelessCrawler):
                 description += elm.text
             return description
 
-
     def _get_size_m2(self, soup: SoupInfo) -> Optional[float]:
         """Return the size of the offer's apartment."""
         size_str = soup.base.find('li', {'class':'offer-item-area'}).text.split()[0]
@@ -106,28 +111,26 @@ class OtodomCrawler(TimelessCrawler):
 
     def _get_sub_district(self, soup: SoupInfo) -> Optional[str]:
         """Get name of the subdistrict for the offer if available."""
-        return None
-        #TODO(ERROR HERE -> self._get_district should be a method call )
-        sub_district = self._get_district.location.group().split()
-        if len(sub_district) > 2:
-            return sub_district[2]
-        else:
-            return None
+        locations = self._get_locations(soup=soup)
+        if len(locations) > 2:
+            return normalize_word(locations[2])
 
     def _get_street(self, soup: SoupInfo) -> Optional[str]:
         """Return the street name -if available - of the object."""
-        heading_search = re.search('ul.', self._get_heading(soup))
-        if heading_search:
-            start = heading_search.span()[0]
-            return self._get_heading(soup)[start:]
+        # We have a separate post processing command that tries to extract street from heading/text
+        # heading_search = re.search('ul.', self._get_heading(soup))
+        # if heading_search:
+        #     start = heading_search.span()[0]
+        #     return self._get_heading(soup)[start:]
 
         if soup.detailed is not None:
-            map_localisation = soup.detailed.find('a', {'href':'#map'}).text.split()
-            for elm in map_localisation:
-                if 'ul.' in elm:
-                    return elm
-                else:
-                    return map_localisation[-1]
+            map_localisation = soup.detailed.find('a', {'href': '#map'})
+            if map_localisation:
+                loc_elements = map_localisation.text.split(',')
+                for elm in loc_elements:
+                    if 'ul.' in elm:
+                        return elm.strip()
+                return loc_elements[-1].strip()
 
     def _get_img_urls(self, soup: SoupInfo) -> Optional[List[str]]:
         """ Get urls of images on post details page. """

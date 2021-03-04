@@ -45,7 +45,7 @@ class TestGumtreeCrawler(GumtreeCrawler):
 @patch('flat_crawler.crawlers.base_crawler.get_soup_from_url', new=mock_get_soup_from_url)
 @pytest.mark.django_db
 def test_gumtree_crawler():
-    crawler = TestGumtreeCrawler(district='district')
+    crawler = TestGumtreeCrawler(district='mokotow')
     crawler.fetch_new_posts()
 
     assert FlatPost.objects.count() == 23
