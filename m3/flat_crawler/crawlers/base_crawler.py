@@ -168,7 +168,7 @@ class BaseCrawler(ABC):
                 newest_post_dt = max(newest_post_dt, post_sketch.dt_posted)
             post_hash, is_present = self._get_post_hash(post=post_sketch)
             if is_present:
-                logger.info("Skipping post, already present.")
+                logger.info(f"Skipping post, already present. (new_posts={new_posts})")
                 continue
             new_posts = True
             post_sketch.post_hash = post_hash

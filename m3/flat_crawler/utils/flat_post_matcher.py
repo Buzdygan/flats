@@ -15,6 +15,11 @@ logger = logging.getLogger(__name__)
 
 ORIGINAL_POST = "original_post"
 
+
+def _fuzzy_equal(a, b, margin):
+    return b - margin <= a <= b + margin
+
+
 class BaseMatcher(object):
     MATCH_TYPE = None
 
@@ -67,8 +72,8 @@ class ImageMatcher(BaseMatcher):
     MATCH_TYPE = "image"
 
     EXACT_THRESHOLD = 2
-    CONFIDENT_THRESHOLD = 3
-    MAYBE_THRESHOLD = 5
+    CONFIDENT_THRESHOLD = 2
+    MAYBE_THRESHOLD = 4
 
     def __init__(self, post, matching_engine: ImageMatchingEngine, dry: bool = False):
         super().__init__(post=post)
@@ -90,9 +95,31 @@ class ImageMatcher(BaseMatcher):
             elif match.num_comparers_maybe_matched == self._engine.num_comparers:
                 maybe_matches += 1
 
-        return (exact_matches >= self.EXACT_THRESHOLD or
-                exact_matches + confident_matches >= self.CONFIDENT_THRESHOLD or
-                exact_matches + confident_matches + maybe_matches >= self.MAYBE_THRESHOLD)
+        thresholds = [
+            (exact_matches, self.EXACT_THRESHOLD),
+            (exact_matches + confident_matches, self.CONFIDENT_THRESHOLD),
+            (exact_matches + confident_matches + maybe_matches, self.MAYBE_THRESHOLD)
+        ]
+
+        lower_thresholds = False
+        if (self._post.price == candidate.price or
+            (self._post.size_m2 == candidate.size_m2 and
+             _fuzzy_equal(self._post.price, candidate.price, 3000)) or
+            self._post.heading == candidate.heading
+        ):
+            lower_thresholds = True
+
+        for match_num, threshold in thresholds:
+            if lower_thresholds:
+                threshold -= 1
+            if match_num >= threshold:
+                return True
+
+        if exact_matches + confident_matches + maybe_matches > 0:
+            print(f"Close: {candidate.heading}, {candidate.size_m2}m2, {candidate.price}zł")
+            print(f"Exact {exact_matches}, confident: {confident_matches}, maybe: {maybe_matches}")
+
+        return False
 
 
 class BaseInfoMatcher(BaseMatcher):
@@ -141,7 +168,7 @@ class MatchingEngine(object):
         num_matched = 0
         num_exceptions = 0
         for post in unmatched_posts:
-            logger.info(f"Matching post: {post}")
+            logger.info(f"Matching post: {post.heading}, {post.size_m2}m2, {post.price}zł")
             try:
                 candidates = self._get_candidates(post=post)
                 matches, match_type = self._find_matches(post=post, candidates=candidates)
@@ -241,7 +268,7 @@ class MatchingEngine(object):
 
     def _match_post_to_existing_flat(self, post: FlatPost, match: FlatPost, match_type: str):
         flat = match.flat
-        logger.info(f"Attaching post: {post} to existing flat: {flat}")
+        logger.info(f"Attaching post: {post} to existing flat: {flat.original_post}")
         flat.min_price = min(flat.min_price, post.price)
         flat.save()
         post.flat = flat

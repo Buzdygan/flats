@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_soup_from_url(url: str):
+    logger.info(f"Fetching soup from url {url}")
     try:
         page = requests.get(url)
         return BeautifulSoup(page.content, "html.parser")
@@ -24,6 +25,7 @@ def get_soup_from_url(url: str):
 
 
 def get_img_from_url(img_url, resize=None):
+    logger.info(f"Fetching image from url {img_url}")
     img = Image.open(BytesIO(requests.get(img_url).content))
     if resize:
         img = img.resize(resize)

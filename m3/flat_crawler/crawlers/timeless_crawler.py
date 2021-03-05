@@ -23,12 +23,14 @@ class TimelessCrawler(BaseCrawler):
                 newest_post_dt=newest_dt,
                 oldest_post_dt=oldest_dt
             )
+            if had_new_posts:
+                logger.info("New posts found.")
 
             if had_new_posts:
                 pages_without_posts = 0
             else:
-                logger.info(f"{post_page_url} didn't have new posts")
                 pages_without_posts += 1
+                logger.info(f"No new posts, (pages without posts={pages_without_posts})")
 
             if pages_without_posts > self._max_pages_without_posts:
                 logger.info(f"Stop crawling. {pages_without_posts} pages didn't have new posts")
