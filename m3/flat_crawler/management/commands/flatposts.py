@@ -14,9 +14,7 @@ class Command(BaseCommand):
         parser.add_argument('--preview', action='store_true')
 
     def handle(self, *args, **options):
-
         crawl_params = {}
-
         preview_mode = options.pop('preview')
         if preview_mode:
             for key in options.keys():
@@ -25,9 +23,10 @@ class Command(BaseCommand):
         Crawl().handle(otodom=True, **options)
         Crawl().handle(**options)
 
-        ExtractInfo.handle(locations=True)
-        ExtractInfo.handle(geodata=True)
-        ExtractInfo.handle(parse_geodata=True)
-        ExtractInfo.handle(attach_areas=True)
+        if not preview_mode:
+            ExtractInfo.handle(locations=True)
+            ExtractInfo.handle(geodata=True)
+            ExtractInfo.handle(parse_geodata=True)
+            ExtractInfo.handle(attach_areas=True)
         ExtractInfo.handle()
         MatchPosts.handle()
