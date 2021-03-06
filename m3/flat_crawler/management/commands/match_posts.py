@@ -11,7 +11,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        if options['reset_matching']:
+        if options.get('reset_matching'):
             self._reset_matching()
         else:
             MatchingEngine().match_posts()

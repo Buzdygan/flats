@@ -24,9 +24,9 @@ class Command(BaseCommand):
         Crawl().handle(**options)
 
         if not preview_mode:
-            ExtractInfo.handle(locations=True)
-            ExtractInfo.handle(geodata=True)
-            ExtractInfo.handle(parse_geodata=True)
-            ExtractInfo.handle(attach_areas=True)
-        ExtractInfo.handle()
-        MatchPosts.handle()
+            ExtractInfo().handle(locations=True)
+            ExtractInfo().handle(geodata=True)
+            ExtractInfo().handle(parse_geodata=True)
+            ExtractInfo().handle(attach_areas=True)
+        ExtractInfo().handle()
+        MatchPosts().handle()

@@ -35,27 +35,27 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        limit = options['limit']
+        limit = options.get('limit')
         posts = FlatPost.objects.annotate(num_locations=Count('locations'))
         posts = posts.filter(district__in=SELECTED_DISTRICTS)
-        if options['locations']:
+        if options.get('locations'):
             posts = posts.filter(num_locations=0, tried_to_extract_locations=False)
             self._extract_locations(posts=posts, limit=limit)
-        elif options['geodata']:
+        elif options.get('geodata'):
             locations = Location.objects.annotate(
                 num_posts=Count('flatpost')
             ).filter(num_posts__gt=0, geolocation_data__isnull=True)
             self._extract_geodata(locations, limit=limit)
-        elif options['parse_geodata']:
+        elif options.get('parse_geodata'):
             locations = Location.objects.filter(geolocation_data__isnull=False)
             self._parse_geodata(locations)
-        elif options['read_search_areas']:
+        elif options.get('read_search_areas'):
             self._read_search_areas()
-        elif options['attach_areas']:
+        elif options.get('attach_areas'):
             posts = posts.filter(num_locations__gt=0)
             self._attach_areas_to_posts(posts=posts)
         else:
-            self._extract_info(posts=posts.all(), limit=limit, display_key=options['display_key'])
+            self._extract_info(posts=posts.all(), limit=limit, display_key=options.get('display_key'))
 
     def _read_search_areas(self):
 
