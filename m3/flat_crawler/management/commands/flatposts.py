@@ -20,8 +20,8 @@ class Command(BaseCommand):
             for key in options.keys():
                 options[key] = 1
 
-        Crawl().handle(otodom=True, **options)
         Crawl().handle(**options)
+        Crawl().handle(otodom=True, **options)
 
         if not preview_mode:
             ExtractInfo().handle(locations=True)
