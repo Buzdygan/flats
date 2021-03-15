@@ -159,13 +159,13 @@ class BaseCrawler(ABC):
             except Exception as exc:
                 logger.exception(exc)
                 continue
-            if self._ignore_post(post=post_sketch):
-                continue
             self._validate_post(source_url=post_page_url, post=post_sketch)
             if post_sketch.dt_posted:
                 dt_posted_found = True
                 oldest_post_dt = min(oldest_post_dt, post_sketch.dt_posted)
                 newest_post_dt = max(newest_post_dt, post_sketch.dt_posted)
+            if self._ignore_post(post=post_sketch):
+                continue
             post_hash, is_present = self._get_post_hash(post=post_sketch)
             if is_present:
                 logger.info(f"Skipping post, already present. (new_posts={new_posts})")
@@ -180,7 +180,7 @@ class BaseCrawler(ABC):
                 logger.exception(exc)
                 continue
         if not dt_posted_found:
-            raise exceptions.PostDTPostedMissing(
+            logger.warning(
                 f"No post had dt_posted extracted on {post_page_url}"
             )
         return new_posts, newest_post_dt, oldest_post_dt

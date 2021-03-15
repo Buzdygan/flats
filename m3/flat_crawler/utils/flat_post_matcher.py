@@ -168,7 +168,6 @@ class MatchingEngine(object):
         num_matched = 0
         num_exceptions = 0
         for post in unmatched_posts:
-            logger.info(f"Matching post: {post.heading}, {post.size_m2}m2, {post.price}zł")
             try:
                 candidates = self._get_candidates(post=post)
                 matches, match_type = self._find_matches(post=post, candidates=candidates)

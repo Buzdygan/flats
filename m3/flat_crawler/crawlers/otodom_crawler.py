@@ -15,18 +15,18 @@ from flat_crawler.utils.text_utils import normalize_word
 logger = logging.getLogger(__name__)
 
 
-MIN_PRICE = 400000
-MAX_PRICE = 1300000
+MIN_PRICE = 450000
+MAX_PRICE = 1100000
 
 OTODOM_SEARCH_URL = (
     'https://otodom.pl/sprzedaz/mieszkanie/'
     f'?search%5Bfilter_float_price%3Afrom%5D={MIN_PRICE}'
     f'&search%5Bfilter_float_price%3Ato%5D={MAX_PRICE}'
-    '&search%5Bfilter_float_m%3Afrom%5D=40'
-    '&search%5Bfilter_float_m%3Ato%5D=90'
+    '&search%5Bfilter_float_m%3Afrom%5D=45'
+    '&search%5Bfilter_float_m%3Ato%5D=75'
     '&search%5Bfilter_enum_market%5D=secondary'
     '&search%5Bfilter_float_building_floors_num%3Ato%5D=8'
-    '&search%5Bfilter_float_build_year%3Ato%5D=1960'
+    '&search%5Bfilter_float_build_year%3Ato%5D=1965'
     '&locations%5B0%5D%5Bregion_id%5D=7'
     '&locations%5B0%5D%5Bsubregion_id%5D=197'
     '&locations%5B0%5D%5Bcity_id%5D=26'
@@ -35,18 +35,10 @@ OTODOM_SEARCH_URL = (
     '&locations%5B1%5D%5Bsubregion_id%5D=197'
     '&locations%5B1%5D%5Bcity_id%5D=26'
     '&locations%5B1%5D%5Bdistrict_id%5D=300420' # Stary Żoliborz
-    '&locations%5B2%5D%5Bregion_id%5D=7'
-    '&locations%5B2%5D%5Bsubregion_id%5D=197'
-    '&locations%5B2%5D%5Bcity_id%5D=26'
-    '&locations%5B2%5D%5Bdistrict_id%5D=961' # Muranów
     '&locations%5B3%5D%5Bregion_id%5D=7'
     '&locations%5B3%5D%5Bsubregion_id%5D=197'
     '&locations%5B3%5D%5Bcity_id%5D=26'
     '&locations%5B3%5D%5Bdistrict_id%5D=44' # Śródmieście
-    '&locations%5B3%5D%5Bregion_id%5D=7'
-    '&locations%5B3%5D%5Bsubregion_id%5D=197'
-    '&locations%5B3%5D%5Bcity_id%5D=26'
-    '&locations%5B3%5D%5Bdistrict_id%5D=38' # Bielany
     '&page={page_num}'
 ) 
 

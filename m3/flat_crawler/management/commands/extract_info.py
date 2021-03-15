@@ -149,8 +149,16 @@ class Command(BaseCommand):
                 num_matched += 1
                 continue
 
-            text = simplify_text(fp.heading + '\n' + fp.desc).lower()
-            locs, matches = extract_locations_from_text(loc_phrase_dict=locs_phrase_dict, text=text, district=fp.district)
+            locs = None
+            if fp.street is not None:
+                locs, matches = extract_locations_from_text(
+                    loc_phrase_dict=locs_phrase_dict, text=fp.street, district=fp.district
+                )
+            if not locs:
+                text = simplify_text(fp.heading + '\n' + fp.desc).lower()
+                locs, matches = extract_locations_from_text(
+                    loc_phrase_dict=locs_phrase_dict, text=text, district=fp.district
+                )
             if locs:
                 num_matched += 1
                 self._display_extracted_info(text, [loc.short_name for loc in locs], matches)

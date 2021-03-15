@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = 'https://www.gumtree.pl'
 
-MIN_PRICE = 400000
-MAX_PRICE = 1500000
+MIN_PRICE = 450000
+MAX_PRICE = 1100000
 
 OFFERS_TEMPLATE = ('/s-mieszkania-i-domy-sprzedam-i-kupie/%(district)s/page-%(page)d/'
                    '%(district_key)sp%(page)d?pr=%(min_price)d,%(max_price)d')
