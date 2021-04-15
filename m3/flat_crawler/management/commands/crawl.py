@@ -1,4 +1,5 @@
 
+
 from datetime import datetime
 
 from django.core.management.base import BaseCommand, CommandError
@@ -6,10 +7,6 @@ from flat_crawler.crawlers.gumtree_crawler import GumtreeCrawler
 from flat_crawler.crawlers.otodom_crawler import OtodomCrawler
 from flat_crawler.crawlers.base_crawler import DistrictFilter
 from flat_crawler import constants as ct
-
-DEFAULT_MIN_PRICE = 400000
-DEFAULT_MAX_PRICE = 1200000
-
 
 
 class Command(BaseCommand):
@@ -22,8 +19,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         # for district in [SRODMIESCIE, MOKOTOW, ZOLIBORZ, OCHOTA, BIELANY]:
         crawler_params = {
-            'min_price': DEFAULT_MIN_PRICE,
-            'max_price': DEFAULT_MAX_PRICE,
+            'min_price': ct.MIN_PRICE,
+            'max_price': ct.MAX_PRICE,
             'post_filter': DistrictFilter(ignored_districts=ct.IGNORED_DISTRICTS),
         }
         for key in ['page_start', 'page_stop', 'lookback_days']:

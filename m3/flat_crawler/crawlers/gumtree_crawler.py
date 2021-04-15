@@ -21,9 +21,6 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = 'https://www.gumtree.pl'
 
-MIN_PRICE = 450000
-MAX_PRICE = 1100000
-
 OFFERS_TEMPLATE = ('/s-mieszkania-i-domy-sprzedam-i-kupie/%(district)s/page-%(page)d/'
                    '%(district_key)sp%(page)d?pr=%(min_price)d,%(max_price)d')
 
@@ -49,8 +46,8 @@ class GumtreeCrawler(BaseCrawler):
     def __init__(
         self,
         district: str,
-        min_price: int = MIN_PRICE,
-        max_price: int = MAX_PRICE,
+        min_price: int = ct.MIN_PRICE,
+        max_price: int = ct.MAX_PRICE,
         page_stop=DEFAULT_PAGE_STOP,
         **kwargs
     ):

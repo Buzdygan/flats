@@ -11,17 +11,15 @@ from flat_crawler.models import Source
 from flat_crawler.crawlers.base_crawler import SoupInfo
 from flat_crawler.crawlers.timeless_crawler import TimelessCrawler
 from flat_crawler.utils.text_utils import normalize_word
+from flat_crawler import constants as ct
 
 logger = logging.getLogger(__name__)
 
 
-MIN_PRICE = 450000
-MAX_PRICE = 1100000
-
 OTODOM_SEARCH_URL = (
     'https://otodom.pl/sprzedaz/mieszkanie/'
-    f'?search%5Bfilter_float_price%3Afrom%5D={MIN_PRICE}'
-    f'&search%5Bfilter_float_price%3Ato%5D={MAX_PRICE}'
+    f'?search%5Bfilter_float_price%3Afrom%5D={ct.MIN_PRICE}'
+    f'&search%5Bfilter_float_price%3Ato%5D={ct.MAX_PRICE}'
     '&search%5Bfilter_float_m%3Afrom%5D=45'
     '&search%5Bfilter_float_m%3Ato%5D=75'
     '&search%5Bfilter_enum_market%5D=secondary'

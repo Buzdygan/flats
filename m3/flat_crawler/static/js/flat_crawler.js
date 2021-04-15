@@ -124,9 +124,9 @@ function resetFilters() {
 
     send_data['district'] = '';
     send_data["sort_by"] = 'Data dodania',
-    send_data['min_size'] = 45;
-    send_data['max_size'] = 85;
-    send_data['min_price'] = 450000;
+    send_data['min_size'] = 30;
+    send_data['max_size'] = 70;
+    send_data['min_price'] = 200000;
     send_data['max_price'] = 1000000;
     send_data['format'] = 'json';
 

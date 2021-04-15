@@ -140,3 +140,31 @@ LOGGING = {
         },
     },
 }
+
+SELECTED_DISTRICTS = [
+    'mokotow',
+    'ochota',
+    'srodmiescie',
+    'zoliborz',
+]
+
+
+IGNORED_DISTRICTS = [
+    'bemowo',
+    'bialoleka',
+    'bielany',
+    'praga-poludnie',
+    'praga-polnoc',
+    'rembertow',
+    'targowek',
+    'ursus',
+    'ursynow',
+    'wawer',
+    'wesola',
+    'wilanow',
+    'wola',
+    'wlochy'
+]
+
+DEFAULT_MIN_PRICE = 200000
+DEFAULT_MAX_PRICE = 1000000
