@@ -9,7 +9,7 @@ from flat_crawler.management.commands.match_posts import Command as MatchPosts
 class Command(BaseCommand):
     def handle(self, *args, **options):
         args = {
-            'lookback_days': 1,
+            'lookback_days': 3,
         }
         Crawl().handle(**args)
         Crawl().handle(otodom=True, **args)
