@@ -17,28 +17,33 @@ logger = logging.getLogger(__name__)
 
 
 OTODOM_SEARCH_URL = (
-    'https://otodom.pl/sprzedaz/mieszkanie/'
-    f'?search%5Bfilter_float_price%3Afrom%5D={ct.MIN_PRICE}'
-    f'&search%5Bfilter_float_price%3Ato%5D={ct.MAX_PRICE}'
-    '&search%5Bfilter_float_m%3Afrom%5D=45'
-    '&search%5Bfilter_float_m%3Ato%5D=75'
-    '&search%5Bfilter_enum_market%5D=secondary'
-    '&search%5Bfilter_float_building_floors_num%3Ato%5D=8'
-    '&search%5Bfilter_float_build_year%3Ato%5D=1965'
+    'https://www.otodom.pl/sprzedaz/mieszkanie/'
+    '?search%5Bfilter_float_price%3Afrom%5D=200000'
+    '&search%5Bfilter_float_price%3Ato%5D=470000'
+    '&search%5Bfilter_float_m%3Afrom%5D=30'
+    '&search%5Bfilter_float_m%3Ato%5D=50'
     '&locations%5B0%5D%5Bregion_id%5D=7'
     '&locations%5B0%5D%5Bsubregion_id%5D=197'
     '&locations%5B0%5D%5Bcity_id%5D=26'
-    '&locations%5B0%5D%5Bdistrict_id%5D=39' # Mokotów
+    '&locations%5B0%5D%5Bdistrict_id%5D=39'
     '&locations%5B1%5D%5Bregion_id%5D=7'
     '&locations%5B1%5D%5Bsubregion_id%5D=197'
     '&locations%5B1%5D%5Bcity_id%5D=26'
-    '&locations%5B1%5D%5Bdistrict_id%5D=300420' # Stary Żoliborz
+    '&locations%5B1%5D%5Bdistrict_id%5D=44'
+    '&locations%5B2%5D%5Bregion_id%5D=7'
+    '&locations%5B2%5D%5Bsubregion_id%5D=197'
+    '&locations%5B2%5D%5Bcity_id%5D=26'
+    '&locations%5B2%5D%5Bdistrict_id%5D=53'
     '&locations%5B3%5D%5Bregion_id%5D=7'
     '&locations%5B3%5D%5Bsubregion_id%5D=197'
     '&locations%5B3%5D%5Bcity_id%5D=26'
-    '&locations%5B3%5D%5Bdistrict_id%5D=44' # Śródmieście
+    '&locations%5B3%5D%5Bdistrict_id%5D=300426'
+    '&locations%5B4%5D%5Bregion_id%5D=7'
+    '&locations%5B4%5D%5Bsubregion_id%5D=197'
+    '&locations%5B4%5D%5Bcity_id%5D=26'
+    '&locations%5B4%5D%5Bdistrict_id%5D=117'
     '&page={page_num}'
-) 
+)
 
 DEFAULT_PAGE_STOP = 50
 
