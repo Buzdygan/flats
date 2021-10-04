@@ -17,7 +17,7 @@ How to install:
 7. cd m3
 8. sqlite3 db.sqlite3 (Creates database file, exit by ctr-d)
 9. python manage.py migrate
-10. python manage.py crawl --page-start 1 --page-end 10 (Fetches data, ignore errors)
+10. python manage.py crawl --page-start 1 --page-stop 10 (Fetches data, ignore errors)
 11. python manage.py match_posts (Ignore errors, necessary step after fetching new data)
 12. python manage.py runserver
 13. Enter link displayed (http://127.0.0.1:8000/)
