@@ -124,10 +124,10 @@ function resetFilters() {
 
     send_data['district'] = '';
     send_data["sort_by"] = 'Data dodania',
-    send_data['min_size'] = 35;
-    send_data['max_size'] = 50;
+    send_data['min_size'] = 20;
+    send_data['max_size'] = 45;
     send_data['min_price'] = 200000;
-    send_data['max_price'] = 470000;
+    send_data['max_price'] = 500000;
     send_data['format'] = 'json';
 
     var star_el = document.getElementById('star-filter');

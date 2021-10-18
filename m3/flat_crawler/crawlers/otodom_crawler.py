@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 OTODOM_SEARCH_URL = (
     'https://www.otodom.pl/sprzedaz/mieszkanie/'
     '?search%5Bfilter_float_price%3Afrom%5D=200000'
-    '&search%5Bfilter_float_price%3Ato%5D=470000'
+    '&search%5Bfilter_float_price%3Ato%5D=500000'
     '&search%5Bfilter_float_m%3Afrom%5D=30'
     '&search%5Bfilter_float_m%3Ato%5D=50'
     '&locations%5B0%5D%5Bregion_id%5D=7'
